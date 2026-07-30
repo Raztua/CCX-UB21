@@ -3018,17 +3018,15 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +     &                                   tm(3,j)*f_local(12)
 +      enddo
 +!
-+!     internal forces/moments at representative node (node 2)
-+!
++!     internal forces/moments at representative node
 +      axial_f = f_local(7)
 +      vy      = f_local(8)
 +      vz      = f_local(9)
 +      tx      = f_local(10)
-+      my      = 0.5d0 * (f_local(5) - f_local(11))
-+      mz      = 0.5d0 * (-f_local(6) + f_local(12))
++      my      = f_local(11)
++      mz      = f_local(12)
 +!
-+!     outer fiber coordinates for combined stress calculation
-+!
++!     cross-section outer fiber dimensions for stress recovery
 +      if (nint(sect_type) .eq. 1) then
 +         cy = dims(1)/2.d0
 +         cz = dims(2)/2.d0
@@ -3036,34 +3034,37 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +         cy = dims(1)
 +         cz = dims(1)
 +      elseif (nint(sect_type) .eq. 3) then
-+         cy = max(dims(2), dims(4))/2.d0
-+         cz = dims(1)/2.d0
++         cy = dims(1)/2.d0
++         cz = dims(2)/2.d0
 +      elseif (nint(sect_type) .eq. 4) then
-+         ! T-section (dims: h, b, t_f, t_w)
-+         cy = dims(2)/2.d0
-+         w1 = dims(2)*dims(3)
-+         w2 = dims(4)*(dims(1)-dims(3))
-+         alpha = (w1*(dims(1)-dims(3)/2.d0) + 
-+     &            w2*(dims(1)-dims(3))/2.d0)/(w1+w2)
-+         cz = max(alpha, dims(1) - alpha)
-+      elseif (nint(sect_type) .eq. 5) then
-+         cy = dims(2)/2.d0
-+         cz = dims(1)/2.d0
-+      elseif (nint(sect_type) .eq. 6) then
-+         ! L-section (dims: b, h, t)
-+         w1 = dims(3)*dims(2)
-+         w2 = (dims(1)-dims(3))*dims(3)
++         ! T-section (dims: b_flange, h_total, t_flange, t_web)
++         w1 = dims(1)*dims(3)
++         w2 = dims(4)*(dims(2)-dims(3))
 +         alpha = (w1*(dims(3)/2.d0) + 
-+     &            w2*(dims(3)+(dims(1)-dims(3))/2.d0))/(w1+w2)
-+         beta = (w1*(dims(2)/2.d0) + w2*(dims(3)/2.d0))/(w1+w2)
++     &            w2*(dims(3)+(dims(2)-dims(3))/2.d0))/(w1+w2)
++         cy = dims(1)/2.d0
++         cz = max(alpha, dims(2) - alpha)
++      elseif (nint(sect_type) .eq. 5) then
++         ! Channel-section (dims: b_flange, h_total, t_flange, t_web)
++         w1 = 2.d0*dims(1)*dims(3)
++         w2 = dims(4)*(dims(2)-2.d0*dims(3))
++         alpha = (w1*(dims(3)/2.d0) + 
++     &            w2*(dims(4)/2.d0))/(w1+w2)
++         cy = max(alpha, dims(1) - alpha)
++         cz = dims(2)/2.d0
++      elseif (nint(sect_type) .eq. 6) then
++         ! Angle-section (dims: b_leg1, h_leg2, t_leg1, t_leg2)
++         w1 = dims(1)*dims(3)
++         w2 = dims(4)*(dims(2)-dims(3))
++         alpha = (w1*(dims(1)/2.d0) + 
++     &            w2*(dims(4)/2.d0))/(w1+w2)
++         beta = (w1*(dims(3)/2.d0) + 
++     &           w2*(dims(3)+(dims(2)-dims(3))/2.d0))/(w1+w2)
 +         cy = max(alpha, dims(1) - alpha)
 +         cz = max(beta, dims(2) - beta)
-+      elseif (nint(sect_type) .eq. 7) then
-+         cy = dims(2)/2.d0
-+         cz = dims(1)/2.d0
 +      else
-+         cy = 0.05d0
-+         cz = 0.05d0
++         cy = dims(1)/2.d0
++         cz = dims(2)/2.d0
 +      endif
 +!
 +!     compute stress values
@@ -3075,7 +3076,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +      tau_xz = vz / (a * xk_z)
 +      tau_tor = tx * max(cy,cz) / j_tors
 +!
-+!     write continuous diagram along element length to beam_stresses.txt
++!     write continuous diagram along element length to ub21_beam_forces.csv
 +!
 +      w1        = prop(index+24)
 +      w2        = prop(index+25)
@@ -3097,12 +3098,14 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +      endif
 +
 +      if (nelem .eq. 1 .and. istep .eq. 1) then
-+         open(99, file="beam_stresses.txt", status="unknown", 
++         open(99, file="ub21_beam_forces.csv", status="unknown", 
 +     &        position="rewind")
 +         write(99, '(A)') "Step,Element,Station_Pct,X_local,"//
-+     &        "Axial_Force,Vy,Vz,Mx,My,Mz,Max_Stress"
++     &        "Fx_Axial,Vy_Shear,Vz_Shear,Mx_Torsion,My_Bending,"//
++     &        "Mz_Bending,Sxx_Axial,Sxx_Bending_Y,Sxx_Bending_Z,"//
++     &        "Sxx_Max_Combined,Sxy_Shear,Sxz_Shear,Stors_Torsion"
 +      else
-+         open(99, file="beam_stresses.txt", status="unknown", 
++         open(99, file="ub21_beam_forces.csv", status="unknown", 
 +     &        position="append")
 +      endif
 +      
@@ -3172,9 +3175,10 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +         my_x = M1_y * (1.d0 - xi_station) + M2_y * xi_station + M0_y
 +         mz_x = M1_z * (1.d0 - xi_station) + M2_z * xi_station + M0_z
 +         
-+         ! Compute outer fiber combined stress at this station
-+         sigma_x = dabs(sigma_axial) + dabs(my_x)*cz/xi22 + 
-+     &             dabs(mz_x)*cy/xi11
++         ! Individual stress components at station x
++         sigma_b_y = dabs(my_x) * cz / xi22
++         sigma_b_z = dabs(mz_x) * cy / xi11
++         sigma_x   = dabs(sigma_axial) + sigma_b_y + sigma_b_z
 +
 +         ! Store in dedicated station array (j=1..11 for stations 0..10)
 +         ub21_stx(1, station_i+1, nelem) = sigma_x
@@ -3184,12 +3188,14 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +         ub21_stx(5, station_i+1, nelem) = my_x
 +         ub21_stx(6, station_i+1, nelem) = mz_x
 +
-+         ! Write to file
++         ! Write all 6 forces & moments and all 6 stress components to CSV
 +         write(99, 1000) istep, nelem, station_i*10, x_loc, 
-+     &        axial_f, f_local(8), f_local(9), 
-+     &        f_local(10), my_x, mz_x, sigma_x
-+ 1000    format(I4,',',I8,',',I4,',',F10.4,',',F20.4,',',F20.4,',',
-+     &        F20.4,',',F20.4,',',F20.4,',',F20.4,',',F20.4)
++     &        axial_f, f_local(8), f_local(9), f_local(10), 
++     &        my_x, mz_x, sigma_axial, sigma_b_y, sigma_b_z, 
++     &        sigma_x, tau_xy, tau_xz, tau_tor
++ 1000    format(I4,',',I8,',',I4,',',F10.4,',',F16.4,',',F16.4,',',
++     &        F16.4,',',F16.4,',',F16.4,',',F16.4,',',F16.4,',',
++     &        F16.4,',',F16.4,',',F16.4,',',F16.4,',',F16.4,',',F16.4)
 +      enddo
 +      close(99)
 +!
@@ -3309,12 +3315,6 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +      endif
 +!
 +      return
-+      end
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_u.f b/resultsmech_u.f
---- a/resultsmech_u.f	2025-10-19 18:21:26.031425614 +0200
-+++ b/resultsmech_u.f	2026-07-27 19:44:03.296369089 +0200
-@@ -68,25 +68,11 @@
-      &        ncmat_,nstate_,stiini,vini,ener,eei,enerini,istep,iinc,
       &        reltime,calcul_fn,calcul_qa,calcul_cauchy,nener,
       &        ikin,nal,ne0,thicke,emeini,nelem,ielprop,prop,t0g,t1g)
 -      elseif(lakon(nelem)(2:4).eq.'S45') then
