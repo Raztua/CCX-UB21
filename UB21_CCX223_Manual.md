@@ -8,7 +8,7 @@ This document provides a detailed installation guide, technical manual, material
 
 ### Overview of Patch Assets
 - **`install_ub21.sh`**: Automated installer script that detects source locations, resolves patch levels (`-p4`, `-p1`, `-p0`), applies the patch, and runs parallel compilation.
-- **`ub21_ccx223.patch`**: Unified diff patch containing 6 new Fortran source modules (`e_c3d_ub21.f`, `e_c3d_ubeam_utils.f`, `resultsmech_ub21.f`, `extrapolate_ub21.f`, `userbeamsections.f`, `saved_loads.f`) and all required modifications to CCX 2.23 core routines (`calinput.f`, `ccx_2.23.c`, `ccx_2.23step.c`, `frd.c`, `nodebelongstoel.f`, `createinum.f`, `Makefile.inc`, `Makefile`, etc.).
+- **`ub21_ccx223.patch`**: Unified diff patch containing Fortran source modules (`e_c3d_ub21.f`, `e_c3d_ubeam_utils.f`, `resultsmech_ub21.f`, `extrapolate_ub21.f`, `userbeamsections.f`, `saved_loads.f`) and all required modifications to CCX 2.23 core routines (`calinput.f`, `ccx_2.23.c`, `ccx_2.23step.c`, `frd.c`, `nodebelongstoel.f`, `createinum.f`, `Makefile.inc`, `Makefile`, etc.).
 
 ---
 
@@ -96,19 +96,36 @@ If you have Git installed on Windows:
 
 ---
 
-## 2. UB21 Element Specification
+## 2. UB21 Element Specification & Definition
 
-The **UB21** element is a custom 2-node 3D beam element integrated natively into CCX.
+The **UB21** element is a custom 2-node 3D beam element integrated natively into CCX as a user element.
 
-### Element Features
+### Element Declaration (`*USER ELEMENT`)
+In CalculiX, user elements must be declared before any element topology is defined:
+
+```inp
+*USER ELEMENT, TYPE=UB21, NODES=2, MAXDOF=6, INTEGRATIONPOINTS=1
+```
+
+*(For the 3-node quadratic user beam element UB32, declare `TYPE=UB32, NODES=3, MAXDOF=6, INTEGRATIONPOINTS=1`).*
+
+### Element Connectivity (`*ELEMENT`)
+Elements are instantiated with standard connectivity syntax:
+
+```inp
+*ELEMENT, TYPE=UB21, ELSET=<elset_name>
+<elem_id>, <node1>, <node2>
+```
+
+### Element Capabilities
 - **Nodes**: 2 nodes per element (Node 1, Node 2).
 - **Degrees of Freedom (DOFs)**: 6 DOFs per node (`UX`, `UY`, `UZ`, `ROTX`, `ROTY`, `ROTZ`).
 - **Kinematics**: Timoshenko shear deformation formulation with Euler-Bernoulli limiting behavior.
-- **Section Orientations**: Arbitrary 3D orientation via 3-node direction vectors or `ORIENTATION` key definitions.
-- **Section Rotations**: In-plane section rotation around the longitudinal axis via `ROTATION=<angle_deg>`.
-- **Nodal Offsets**: 3D geometric offsets at Node 1 and Node 2.
-- **Member End Releases (Hinges)**: Static condensation of rotational degrees of freedom (`M1`, `M2`, `T`, `M1-M2`, `ALLM`).
-- **Mass Matrices**: Consistent mass matrix formulation and optional lumped mass formulation (controlled by environment variable `CCX_LUMPED_MASS=1` or explicit dynamics).
+- **Section Orientations**: Defined via local direction vector $\mathbf{e}_2$ on the section card or `ORIENTATION` key definitions.
+- **Section Rotations**: In-plane section rotation around the longitudinal beam axis via `ROTATION=<angle_deg>`.
+- **Nodal Offsets**: 3D geometric offsets at Node 1 and Node 2 defined via `OFFSET=`, `OFFSET1=`, `OFFSET2=`.
+- **Member End Releases (Hinges)**: Static condensation of rotational degrees of freedom (`M1`, `M2`, `T`, `M1-M2`, `ALLM`, or bitwise integer fixity).
+- **Mass Matrices**: Consistent mass matrix formulation and optional lumped mass formulation (controlled by explicit dynamics or environment variable `CCX_LUMPED_MASS=1`).
 
 ---
 
@@ -119,10 +136,34 @@ To assign section properties, material, orientation, offsets, and hinges to UB21
 ### Syntax Layout
 
 ```inp
-*USER BEAM SECTION, ELSET=<elset_name>, MATERIAL=<mat_name>, SECTION=<RECT|PIPE|CIRC|I|T|CHAN|L> [, ORIENTATION=<ori_name>] [, ROTATION=<angle_in_degrees>] [, RELEASE1=<code1>] [, RELEASE2=<code2>]
-<dimension_1>, <dimension_2>, <dimension_3>, <dimension_4>, <dimension_5>, <dimension_6>
-<offset_x1>, <offset_y1>, <offset_z1>, <offset_x2>, <offset_y2>, <offset_z2>
+*USER BEAM SECTION, ELSET=<elset_name>, MATERIAL=<mat_name>, SECTION=<RECT|CIRC|PIPE|I|T|CHAN|L|BOX> [, ORIENTATION=<ori_name>] [, ROTATION=<angle_deg>] [, RELEASE1=<code1>] [, RELEASE2=<code2>] [, OFFSET=(y,z)|OFFSET=(x,y,z)] [, OFFSET1=(x,y,z)] [, OFFSET2=(x,y,z)]
+<dim_1>, <dim_2>, <dim_3>, <dim_4>, <dim_5>, <dim_6>
+<e2_x>, <e2_y>, <e2_z>
 ```
+
+### Parameter Explanations
+
+1. **Keyword Line Parameters**:
+   - `ELSET=<name>`: Name of the element set assigned to this section. (Required)
+   - `MATERIAL=<name>`: Name of the material definition. (Required)
+   - `SECTION=<type>`: Cross-section shape: `RECT`, `CIRC`, `PIPE`, `I`, `T`, `CHAN`, `L`, or `BOX`. (Required)
+   - `ORIENTATION=<name>`: Optional user coordinate system orientation name.
+   - `ROTATION=<angle>`: In-plane rotation angle (in degrees) around the beam longitudinal axis.
+   - `RELEASE1=<code>`: Member end release code at Node 1 (`M1`, `M2`, `T`, `M1-M2`, `ALLM`, or custom bitmask integer `1..63`).
+   - `RELEASE2=<code>`: Member end release code at Node 2 (`M1`, `M2`, `T`, `M1-M2`, `ALLM`, or custom bitmask integer `1..63`).
+   - `OFFSET=(y, z)` or `OFFSET=(x, y, z)`: Local geometric offsets applied to all nodes of the element.
+   - `OFFSET1=(x, y, z)`: Local geometric offset at Node 1.
+   - `OFFSET2=(x, y, z)`: Local geometric offset at Node 2.
+
+2. **Data Line 1 (Dimensions)**:
+   - Up to 6 dimension values `<dim_1>, ..., <dim_6>` corresponding to the selected `SECTION` type (see Section 4).
+
+3. **Data Line 2 (Orientation Normal / Direction Vector $\mathbf{e}_2$)**:
+   - 3 real numbers `<e2_x>, <e2_y>, <e2_z>` defining the local transverse axis 2 (local $y$-direction) in global Cartesian coordinates (e.g. `0.0, 1.0, 0.0` or `0.0, 0.0, 1.0`).
+   - *Must have non-zero length* ($\|\mathbf{e}_2\| > 0$).
+
+> [!NOTE]
+> Do **not** place nodal offsets on the second data line. Offsets are configured directly on the keyword header line using `OFFSET=`, `OFFSET1=`, `OFFSET2=`.
 
 ---
 
@@ -130,15 +171,20 @@ To assign section properties, material, orientation, offsets, and hinges to UB21
 
 | Section Code (`SECTION=`) | Parameter List | Parameter Description |
 | :--- | :--- | :--- |
-| **`RECT`** | `b, h` | Base width `b` (along local y), Height `h` (along local z) |
-| **`CIRC`** | `d` | Outer diameter `d` |
-| **`PIPE`** | `d_outer, t` | Outer diameter `d_outer`, Wall thickness `t` |
-| **`I`** | `h, b_top, t_f1, b_bot, t_f2, t_w` | Height `h`, Top flange width, Top flange thickness, Bottom flange width, Bottom flange thickness, Web thickness |
-| **`T`** | `h, b_flange, t_flange, t_web` | Total height `h`, Flange width, Flange thickness, Web thickness |
-| **`CHAN`** (U-channel) | `h, b_flange, t_flange, t_web` | Channel height `h`, Flange width, Flange thickness, Web thickness |
-| **`L`** (Angle) | `h, b, t` | Leg 1 length `h`, Leg 2 width `b`, Thickness `t` |
+| **`RECT`** | `b, h` | Width `b` (along local axis 2 / $y$), Height `h` (along local axis 3 / $z$) |
+| **`CIRC`** | `r_o` | Outer radius `r_o` (or `r_o, 0.0`) |
+| **`PIPE`** | `r_o, t` | Outer radius `r_o`, Wall thickness `t` |
+| **`I`** | `h, b_top, t_f1, b_bot, t_f2, t_w` | Total height `h`, Top flange width, Top flange thickness, Bottom flange width, Bottom flange thickness, Web thickness |
+| **`T`** | `h, b, t_f, t_w` | Total height `h`, Flange width `b`, Flange thickness `t_f`, Web thickness `t_w` |
+| **`CHAN`** (U-channel) | `h, b, t_f, t_w` | Channel height `h`, Flange width `b`, Flange thickness `t_f`, Web thickness `t_w` |
+| **`L`** (Angle) | `b, h, t` | Horizontal leg width `b`, Vertical leg height `h`, Leg thickness `t` |
+| **`BOX`** (Hollow Box) | `h, b, t_bot, t_left, t_top, t_right` | Total height `h`, Total width `b`, Bottom flange thickness `t_bot`, Left web thickness `t_left`, Top flange thickness `t_top`, Right web thickness `t_right` *(or `h, b, t, t, t, t` for uniform thickness)* |
 
-> **Note on Asymmetric Sections (`CHAN`, `L`)**: UB21 automatically computes principal axes of inertia and principal rotation angles to prevent spurious shear-bending coupling.
+> [!TIP]
+> For circular and pipe sections (`CIRC` and `PIPE`), the first parameter is the **outer radius $r_o$**, not the diameter.
+
+> [!NOTE]
+> **Asymmetric Sections (`CHAN`, `L`)**: UB21 automatically computes principal axes of inertia and principal rotation angles to prevent spurious shear-bending coupling.
 
 ---
 
@@ -212,10 +258,10 @@ Applied at nodes directly in global Cartesian components:
 | **`PX`** | Uniform axial force per unit length along local element beam axis. |
 | **`P1`** | Uniform transverse load per unit length along local transverse axis 1 ($y$). |
 | **`P2`** | Uniform transverse load per unit length along local transverse axis 2 ($z$). |
-| **`P1_T1`** | Trapezoidal/triangular load along local $y$ (increasing from Node 1 to Node 2). |
-| **`P1_T2`** | Trapezoidal/triangular load along local $y$ (decreasing from Node 1 to Node 2). |
-| **`P2_T1`** | Trapezoidal/triangular load along local $z$ (increasing from Node 1 to Node 2). |
-| **`P2_T2`** | Trapezoidal/triangular load along local $z$ (decreasing from Node 1 to Node 2). |
+| **`P1_T1`** | Triangular load along local $y$ (increasing from 0 at Node 1 to magnitude at Node 2). |
+| **`P1_T2`** | Triangular load along local $y$ (decreasing from magnitude at Node 1 to 0 at Node 2). |
+| **`P2_T1`** | Triangular load along local $z$ (increasing from 0 at Node 1 to magnitude at Node 2). |
+| **`P2_T2`** | Triangular load along local $z$ (decreasing from magnitude at Node 1 to 0 at Node 2). |
 | **`P1_P_aa_bb`** | Partial patch load along local $y$ starting at `aa`% and ending at `bb`% of length (e.g. `P1_P_25_75`). |
 | **`P2_P_aa_bb`** | Partial patch load along local $z$ starting at `aa`% and ending at `bb`% of length (e.g. `P2_P_20_80`). |
 | **`CENTRIF`** | Centrifugal load field defined by rotational velocity $\omega$ and axis. |
@@ -280,7 +326,8 @@ A 5.0m cantilever beam fixed at Node 1, modeled with 5 UB21 elements, subjected 
 ```inp
 *HEADING
 UB21 Cantilever Beam - Static Analysis with Uniform Transverse Load
-*NODE
+*USER ELEMENT, TYPE=UB21, NODES=2, MAXDOF=6, INTEGRATIONPOINTS=1
+*NODE, NSET=NALL
 1,  0.0, 0.0, 0.0
 2,  1.0, 0.0, 0.0
 3,  2.0, 0.0, 0.0
@@ -300,7 +347,7 @@ UB21 Cantilever Beam - Static Analysis with Uniform Transverse Load
 7850.0
 *USER BEAM SECTION, ELSET=EBEAM, MATERIAL=STEEL, SECTION=RECT
 0.1, 0.2
-0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+0.0, 1.0, 0.0
 *BOUNDARY
 1, 1, 6
 *STEP
@@ -325,7 +372,8 @@ A portal frame with fixed column bases and a pin-connected rafter beam (`RELEASE
 ```inp
 *HEADING
 UB21 Portal Frame - Eigenvalue Buckling Analysis with Member End Releases
-*NODE
+*USER ELEMENT, TYPE=UB21, NODES=2, MAXDOF=6, INTEGRATIONPOINTS=1
+*NODE, NSET=NALL
 1,  0.0, 0.0, 0.0
 2,  0.0, 4.0, 0.0
 3,  6.0, 4.0, 0.0
@@ -340,10 +388,10 @@ UB21 Portal Frame - Eigenvalue Buckling Analysis with Member End Releases
 2.1E11, 0.3
 *USER BEAM SECTION, ELSET=ECOL, MATERIAL=STEEL, SECTION=I
 0.3, 0.15, 0.01, 0.15, 0.01, 0.008
-0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+0.0, 0.0, 1.0
 *USER BEAM SECTION, ELSET=EBEAM, MATERIAL=STEEL, SECTION=I, RELEASE1=ALLM, RELEASE2=ALLM
 0.4, 0.18, 0.012, 0.18, 0.012, 0.009
-0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+0.0, 1.0, 0.0
 *BOUNDARY
 1, 1, 6
 4, 1, 6
@@ -362,14 +410,15 @@ S
 
 ---
 
-### Sample 3: Space Truss System using Pin-Ended UB21 Elements (`*FREQUENCY`)
+### Sample 3: 3D Frame Tower Module with Bracing Hinges (`*FREQUENCY`)
 
-A space truss tower module where all structural members are modeled using UB21 elements with spherical end releases (`RELEASE1=48`, `RELEASE2=48`, releasing local $R_y$ and $R_z$), undergoing natural frequency extraction.
+A 3D frame tower module where all columns and beams are modeled with UB21 elements, with diagonal cross-braces using pin-ended spherical releases (`RELEASE1=M1-M2, RELEASE2=M1-M2`), undergoing natural frequency extraction.
 
 ```inp
 *HEADING
-UB21 3D Space Truss Module - Frequency Analysis with Pin-Ended Members
-*NODE
+UB21 3D Frame Tower Module - Frequency Analysis
+*USER ELEMENT, TYPE=UB21, NODES=2, MAXDOF=6, INTEGRATIONPOINTS=1
+*NODE, NSET=NALL
 1, -1.0, -1.0, 0.0
 2,  1.0, -1.0, 0.0
 3,  1.0,  1.0, 0.0
@@ -378,15 +427,17 @@ UB21 3D Space Truss Module - Frequency Analysis with Pin-Ended Members
 6,  0.5, -0.5, 3.0
 7,  0.5,  0.5, 3.0
 8, -0.5,  0.5, 3.0
-*ELEMENT, TYPE=UB21, ELSET=ETRUSS
+*ELEMENT, TYPE=UB21, ELSET=ECOL
 1, 1, 5
 2, 2, 6
 3, 3, 7
 4, 4, 8
+*ELEMENT, TYPE=UB21, ELSET=EBEAM
 5, 5, 6
 6, 6, 7
 7, 7, 8
 8, 8, 5
+*ELEMENT, TYPE=UB21, ELSET=EBRACE
 9, 1, 6
 10, 2, 7
 11, 3, 8
@@ -396,14 +447,20 @@ UB21 3D Space Truss Module - Frequency Analysis with Pin-Ended Members
 7.0E10, 0.33
 *DENSITY
 2700.0
-*USER BEAM SECTION, ELSET=ETRUSS, MATERIAL=ALU, SECTION=PIPE, RELEASE1=48, RELEASE2=48
-0.06, 0.004
-0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+*USER BEAM SECTION, ELSET=ECOL, MATERIAL=ALU, SECTION=PIPE
+0.03, 0.004
+0.0, 1.0, 0.0
+*USER BEAM SECTION, ELSET=EBEAM, MATERIAL=ALU, SECTION=PIPE
+0.025, 0.003
+0.0, 0.0, 1.0
+*USER BEAM SECTION, ELSET=EBRACE, MATERIAL=ALU, SECTION=PIPE, RELEASE1=M1-M2, RELEASE2=M1-M2
+0.02, 0.002
+0.0, 1.0, 0.0
 *BOUNDARY
-1, 1, 3
-2, 1, 3
-3, 1, 3
-4, 1, 3
+1, 1, 6
+2, 1, 6
+3, 1, 6
+4, 1, 6
 *STEP
 *FREQUENCY
 5

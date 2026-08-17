@@ -1,6 +1,6 @@
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/allocation.f b/allocation.f
---- a/allocation.f	2025-10-19 18:21:25.939425230 +0200
-+++ b/allocation.f	2026-07-16 20:47:12.899157992 +0200
+diff -u -N a/allocation.f b/allocation.f
+--- a/allocation.f
++++ b/allocation.f
 @@ -2630,6 +2630,15 @@
       &           inl,ipoinp,inp,ipoinpc)
            enddo
@@ -27,9 +27,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/allocation.f b/allocation.
              exit
            endif
          enddo
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/calcenergy.f b/calcenergy.f
---- a/calcenergy.f	2025-10-19 18:21:25.951425280 +0200
-+++ b/calcenergy.f	2026-07-17 08:38:32.422235469 +0200
+diff -u -N a/calcenergy.f b/calcenergy.f
+--- a/calcenergy.f
++++ b/calcenergy.f
 @@ -49,6 +49,7 @@
           if(ipkon(nelem).lt.0) cycle
  !
@@ -38,9 +38,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/calcenergy.f b/calcenergy.
           indexe=ipkon(nelem)
  !     
           if(lakonl(1:5).eq.'C3D8I') then
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/calinput.f b/calinput.f
---- a/calinput.f	2025-10-19 18:21:25.955425296 +0200
-+++ b/calinput.f	2026-07-15 20:26:13.438391732 +0200
+diff -u -N a/calinput.f b/calinput.f
+--- a/calinput.f
++++ b/calinput.f
 @@ -1212,6 +1212,14 @@
       &       imat,ntmat_,ncmat_,iperturb,irstrt,istep,istat,n,
       &       iline,ipol,inl,ipoinp,inp,cocon,ncocon,ipoinpc,ier)
@@ -56,15 +56,15 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/calinput.f b/calinput.f
        elseif(textpart(1)(1:12).eq.'*USERSECTION') then
          call usersections(inpc,textpart,set,istartset,iendset,
       &       ialset,nset,ielmat,matname,nmat,irstrt,istep,istat,n,
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/ccx_2.23.c b/ccx_2.23.c
---- a/ccx_2.23.c	2025-10-19 18:23:34.511961818 +0200
-+++ b/ccx_2.23.c	2026-07-29 08:49:53.319168817 +0200
+diff -u -N a/ccx_2.23.c b/ccx_2.23.c
+--- a/ccx_2.23.c
++++ b/ccx_2.23.c
 @@ -158,7 +158,7 @@
    printf("software, and you are welcome to redistribute it under\n");
    printf("certain conditions, see gpl.htm\n\n");
    printf("************************************************************\n\n");
 -  printf("You are using an executable made on Sun Oct 19 18:23:34 CEST 2025\n");
-+  printf("You are using an executable made on Wed Jul 29 08:49:53 AM CEST 2026\n");
++  printf("You are using an executable made on Thu Jul 30 09:40:33 AM CEST 2026\n");
    fflush(stdout);
  
    NNEW(ipoinp,ITG,2*nentries);
@@ -148,22 +148,21 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/ccx_2.23.c b/ccx_2.23.c
        if(nener==1)RENEW(ener,double,2*mi[0]*ne1);
  
        /* moving the contact state variables back by (ne-ne1) 
-Binary files a/ccx_2.23_MT and b/ccx_2.23_MT differ
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/ccx_2.23step.c b/ccx_2.23step.c
---- a/ccx_2.23step.c	2025-10-19 18:23:34.511961818 +0200
-+++ b/ccx_2.23step.c	2026-07-29 08:49:53.320168832 +0200
+diff -u -N a/ccx_2.23step.c b/ccx_2.23step.c
+--- a/ccx_2.23step.c
++++ b/ccx_2.23step.c
 @@ -301,7 +301,7 @@
      printf("software, and you are welcome to redistribute it under\n");
      printf("certain conditions, see gpl.htm\n\n");
      printf("************************************************************\n\n");
 -    printf("You are using an executable made on Sun Oct 19 18:23:34 CEST 2025\n");
-+    printf("You are using an executable made on Wed Jul 29 08:49:53 AM CEST 2026\n");
++    printf("You are using an executable made on Thu Jul 30 09:40:33 AM CEST 2026\n");
      fflush(stdout);
  
      NNEW(ipoinp,ITG,2*nentries);
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/checktemp.f b/checktemp.f
---- a/checktemp.f	2025-10-19 18:21:25.963425329 +0200
-+++ b/checktemp.f	2026-07-17 17:44:36.335185125 +0200
+diff -u -N a/checktemp.f b/checktemp.f
+--- a/checktemp.f
++++ b/checktemp.f
 @@ -32,7 +32,15 @@
  !
        do i=1,ne
@@ -181,9 +180,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/checktemp.f b/checktemp.f
              nope=20
           elseif(lakon(i)(4:4).eq.'8') then
              nope=8
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/createinum.f b/createinum.f
---- a/createinum.f	2025-10-19 18:21:25.971425363 +0200
-+++ b/createinum.f	2026-07-16 20:05:00.704188150 +0200
+diff -u -N a/createinum.f b/createinum.f
+--- a/createinum.f
++++ b/createinum.f
 @@ -64,6 +64,9 @@
  !     
          if(lakonl(1:1).eq.'F') then
@@ -203,9 +202,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/createinum.f b/createinum.
          else
            cycle
          endif
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/dloads.f b/dloads.f
---- a/dloads.f	2025-10-19 18:21:25.979425396 +0200
-+++ b/dloads.f	2026-07-17 17:46:42.306023620 +0200
+diff -u -N a/dloads.f b/dloads.f
+--- a/dloads.f
++++ b/dloads.f
 @@ -315,6 +315,7 @@
       &         (label(1:2).ne.'P5').and.(label(1:2).ne.'P6').and.
       &         (label(1:2).ne.'P ').and.(label(1:2).ne.'BX').and.
@@ -214,7 +213,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/dloads.f b/dloads.f
  c     BernhardiStart
       &         (label(1:2).ne.'ED')).or.
       &         ((label(3:6).ne.'NOR1').and.(label(3:6).ne.'NOR2').and.
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/e_c3d_ub21.f b/e_c3d_ub21.f
+diff -u -N a/e_c3d_ub21.f b/e_c3d_ub21.f
 --- a/e_c3d_ub21.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/e_c3d_ub21.f	2026-07-29 08:31:10.657266625 +0200
 @@ -0,0 +1,962 @@
@@ -1180,7 +1179,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/e_c3d_ub21.f b/e_c3d_ub21.
 + !
 +      return
 +      end
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/e_c3d_ubeam_utils.f b/e_c3d_ubeam_utils.f
+diff -u -N a/e_c3d_ubeam_utils.f b/e_c3d_ubeam_utils.f
 --- a/e_c3d_ubeam_utils.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/e_c3d_ubeam_utils.f	2026-07-22 19:18:30.931330363 +0200
 @@ -0,0 +1,452 @@
@@ -1636,9 +1635,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/e_c3d_ubeam_utils.f b/e_c3
 +         endif
 +      enddo
 +      end subroutine
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/e_c3d_u.f b/e_c3d_u.f
---- a/e_c3d_u.f	2025-10-19 18:21:25.983425413 +0200
-+++ b/e_c3d_u.f	2026-07-27 19:44:03.296369089 +0200
+diff -u -N a/e_c3d_u.f b/e_c3d_u.f
+--- a/e_c3d_u.f
++++ b/e_c3d_u.f
 @@ -88,8 +88,8 @@
       &       ne0,ipkon,thicke,integerglob,doubleglob,tieset,istartset,
       &       iendset,ialset,ntie,nasym,ielprop,prop)
@@ -1670,9 +1669,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/e_c3d_u.f b/e_c3d_u.f
        else
  !
  !       substructure (superelement)
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/elements.f b/elements.f
---- a/elements.f	2025-10-19 18:21:25.983425413 +0200
-+++ b/elements.f	2026-07-27 22:23:47.020926923 +0200
+diff -u -N a/elements.f b/elements.f
+--- a/elements.f
++++ b/elements.f
 @@ -407,13 +407,23 @@
       &       ichar(label(4:4))*256+
       &       ichar(label(5:5))
@@ -1700,9 +1699,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/elements.f b/elements.f
        endif
  !     
        do
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/extrapolateshell.f b/extrapolateshell.f
---- a/extrapolateshell.f	2025-10-19 18:21:25.987425430 +0200
-+++ b/extrapolateshell.f	2026-07-27 19:42:49.652053569 +0200
+diff -u -N a/extrapolateshell.f b/extrapolateshell.f
+--- a/extrapolateshell.f
++++ b/extrapolateshell.f
 @@ -52,17 +52,17 @@
  !
           if(ipkon(i).lt.0) cycle
@@ -1731,7 +1730,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/extrapolateshell.f b/extra
  !
        enddo
  !
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/extrapolate_ub21.f b/extrapolate_ub21.f
+diff -u -N a/extrapolate_ub21.f b/extrapolate_ub21.f
 --- a/extrapolate_ub21.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/extrapolate_ub21.f	2026-07-16 20:16:08.304379135 +0200
 @@ -0,0 +1,56 @@
@@ -1791,9 +1790,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/extrapolate_ub21.f b/extra
 +!
 +      return
 +      end
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/extrapolate_u.f b/extrapolate_u.f
---- a/extrapolate_u.f	2025-10-19 18:21:25.987425430 +0200
-+++ b/extrapolate_u.f	2026-07-27 19:44:03.296369089 +0200
+diff -u -N a/extrapolate_u.f b/extrapolate_u.f
+--- a/extrapolate_u.f
++++ b/extrapolate_u.f
 @@ -38,12 +38,8 @@
           call extrapolate_u1(yi,yn,ipkon,inum,kon,lakon,nfield,nk,
       &        ne,mi,ndim,orab,ielorien,co,iorienloc,cflag,
@@ -1809,9 +1808,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/extrapolate_u.f b/extrapol
       &        ne,mi,ndim,orab,ielorien,co,iorienloc,cflag,
       &        vold,iforce,ielmat,thicke,ielprop,prop,i)
        endif
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frd.c b/frd.c
---- a/frd.c	2025-10-19 18:23:34.511961818 +0200
-+++ b/frd.c	2026-07-29 08:49:53.321168846 +0200
+diff -u -N a/frd.c b/frd.c
+--- a/frd.c
++++ b/frd.c
 @@ -68,6 +68,10 @@
      ip8=8,ip9=9,ip10=10,ip11=11,ip12=12,imat,nelout,ioutall=0,*inumshell=NULL,
      nterms,nout,noutplus,noutmin,mt=mi[1]+1,iflag,numfield,iorienloc;
@@ -1861,7 +1860,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frd.c b/frd.c
      fprintf(f1,"%5sUPGM               CalculiX                                        \n",p1);
      fprintf(f1,"%5sUVERSION           Version 2.23                             \n",p1);
 -    fprintf(f1,"%5sUCOMPILETIME       Sun Oct 19 18:23:34 CEST 2025                    \n",p1);
-+    fprintf(f1,"%5sUCOMPILETIME       Wed Jul 29 08:49:53 AM CEST 2026                    \n",p1);
++    fprintf(f1,"%5sUCOMPILETIME       Thu Jul 30 09:40:33 AM CEST 2026                    \n",p1);
      fprintf(f1,"%5sUDIR                                                               \n",p1);
      fprintf(f1,"%5sUDBN                                                               \n",p1);
      
@@ -2228,9 +2227,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frd.c b/frd.c
    
    if((*nmethod!=5)||(*mode==-1)){
      if((strcmp1(&filab[4350],"SNEG")==0)&&(*ithermal!=2)){
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frdgeneralvector.c b/frdgeneralvector.c
---- a/frdgeneralvector.c	2025-10-19 18:21:26.075425797 +0200
-+++ b/frdgeneralvector.c	2026-07-28 19:39:37.909987882 +0200
+diff -u -N a/frdgeneralvector.c b/frdgeneralvector.c
+--- a/frdgeneralvector.c
++++ b/frdgeneralvector.c
 @@ -204,7 +204,7 @@
      }
    }
@@ -2240,9 +2239,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frdgeneralvector.c b/frdge
  
    SFREE(inodeset);
  
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frdselect.c b/frdselect.c
---- a/frdselect.c	2025-10-19 18:21:26.075425797 +0200
-+++ b/frdselect.c	2026-07-28 19:31:57.990915276 +0200
+diff -u -N a/frdselect.c b/frdselect.c
+--- a/frdselect.c
++++ b/frdselect.c
 @@ -249,7 +249,7 @@
      }
    }
@@ -2252,9 +2251,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/frdselect.c b/frdselect.c
  
    SFREE(inodeset);
    
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/gen3delem.f b/gen3delem.f
---- a/gen3delem.f	2025-10-19 18:21:25.991425446 +0200
-+++ b/gen3delem.f	2026-07-22 19:18:30.932330378 +0200
+diff -u -N a/gen3delem.f b/gen3delem.f
+--- a/gen3delem.f
++++ b/gen3delem.f
 @@ -119,6 +119,8 @@
            if(ipkon(i).lt.0) cycle
            if((lakon(i)(1:2).ne.'C3').and.(lakon(i)(1:1).ne.'D').and.
@@ -2264,7 +2263,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/gen3delem.f b/gen3delem.f
       &         (lakon(i)(1:4).ne.'MASS')) then
  !     
  !     number of nodes belonging to the element
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/getub21stx.f b/getub21stx.f
+diff -u -N a/getub21stx.f b/getub21stx.f
 --- a/getub21stx.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/getub21stx.f	2026-07-29 08:31:10.659958781 +0200
 @@ -0,0 +1,37 @@
@@ -2305,9 +2304,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/getub21stx.f b/getub21stx.
 +!
 +      return
 +      end
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/mafillsm.f b/mafillsm.f
---- a/mafillsm.f	2025-10-19 18:21:26.007425513 +0200
-+++ b/mafillsm.f	2026-07-29 08:31:10.658326009 +0200
+diff -u -N a/mafillsm.f b/mafillsm.f
+--- a/mafillsm.f
++++ b/mafillsm.f
 @@ -37,6 +37,7 @@
  !     
  !     filling the stiffness matrix in spare matrix format (sm)
@@ -2325,9 +2324,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/mafillsm.f b/mafillsm.f
  !     
            if((ipkon(i).lt.0).or.(lakon(i)(1:1).eq.'F')) cycle
            indexe=ipkon(i)
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/Makefile b/Makefile
---- a/Makefile	2025-10-19 18:21:26.351426949 +0200
-+++ b/Makefile	2026-07-29 08:31:23.302720733 +0200
+diff -u -N a/Makefile b/Makefile
+--- a/Makefile
++++ b/Makefile
 @@ -1,6 +1,6 @@
  
 -CFLAGS = -Wall -O2  -I ../../../SPOOLES.2.2 -DARCH="Linux" -DSPOOLES -DARPACK -DMATRIXSTORAGE -DNETWORKOUT
@@ -2351,9 +2350,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/Makefile b/Makefile
 +resultsmech_ub21.o: ub21_module.o
 +getub21stx.o: ub21_module.o
 +
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/Makefile.inc b/Makefile.inc
---- a/Makefile.inc	2025-10-19 18:21:26.351426949 +0200
-+++ b/Makefile.inc	2026-07-29 08:31:23.303035375 +0200
+diff -u -N a/Makefile.inc b/Makefile.inc
+--- a/Makefile.inc
++++ b/Makefile.inc
 @@ -275,8 +275,9 @@
  e_c3d_se.f \
  e_c3d_th.f \
@@ -2407,9 +2406,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/Makefile.inc b/Makefile.in
  user_network_element.f \
  user_network_element_p0.f \
  user_network_element_p1.f \
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/Makefile_MT b/Makefile_MT
---- a/Makefile_MT	2025-10-19 18:21:26.351426949 +0200
-+++ b/Makefile_MT	2026-07-15 19:36:58.126074054 +0200
+diff -u -N a/Makefile_MT b/Makefile_MT
+--- a/Makefile_MT
++++ b/Makefile_MT
 @@ -1,5 +1,5 @@
  
 -CFLAGS = -Wall -O2 -fopenmp -I ../SPOOLES.2.2 -DARCH="Linux" -DSPOOLES -DARPACK -DMATRIXSTORAGE -DUSE_MT=1 
@@ -2434,9 +2433,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/Makefile_MT b/Makefile_MT
  
  ccx_2.23_MT: $(OCCXMAIN) ccx_2.23_MT.a  $(LIBS)
  	./date.pl; $(CC) $(CFLAGS) -c ccx_2.23.c; $(FC) -fopenmp -Wall -O2 -o $@ $(OCCXMAIN) ccx_2.23_MT.a $(LIBS)
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/mastruct.c b/mastruct.c
---- a/mastruct.c	2025-10-19 18:21:26.079425814 +0200
-+++ b/mastruct.c	2026-07-16 20:12:41.029957321 +0200
+diff -u -N a/mastruct.c b/mastruct.c
+--- a/mastruct.c
++++ b/mastruct.c
 @@ -126,7 +126,10 @@
  	if(strcmp1(&lakon[8*i],"F")==0)continue;
  	indexe=ipkon[i];
@@ -2459,9 +2458,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/mastruct.c b/mastruct.c
  	   (strcmp1(&lakon[8*i+1],"S45")==0)||
  	   (strcmp1(&lakon[8*i+1],"S3")==0)){
  	  
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/mastructcs.c b/mastructcs.c
---- a/mastructcs.c	2025-10-19 18:21:26.079425814 +0200
-+++ b/mastructcs.c	2026-07-16 20:12:49.529171302 +0200
+diff -u -N a/mastructcs.c b/mastructcs.c
+--- a/mastructcs.c
++++ b/mastructcs.c
 @@ -68,7 +68,10 @@
      if(ipkon[i]<0) continue;
      indexe=ipkon[i];
@@ -2484,9 +2483,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/mastructcs.c b/mastructcs.
  	 (strcmp1(&lakon[8*i+1],"S45")==0)||
  	 (strcmp1(&lakon[8*i+1],"S3")==0)){
  	  
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/nodebelongstoel.f b/nodebelongstoel.f
---- a/nodebelongstoel.f	2025-10-19 18:21:26.011425529 +0200
-+++ b/nodebelongstoel.f	2026-07-16 20:13:52.349750332 +0200
+diff -u -N a/nodebelongstoel.f b/nodebelongstoel.f
+--- a/nodebelongstoel.f
++++ b/nodebelongstoel.f
 @@ -31,7 +31,10 @@
        do i=1,ne
           if(ipkon(i).lt.0) cycle
@@ -2499,10 +2498,10 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/nodebelongstoel.f b/nodebe
              nope=20
           elseif(lakon(i)(4:4).eq.'8') then
              nope=8
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resultsmech_ub21.f
+diff -u -N a/resultsmech_ub21.f b/resultsmech_ub21.f
 --- a/resultsmech_ub21.f	1970-01-01 01:00:00.000000000 +0100
-+++ b/resultsmech_ub21.f	2026-07-29 08:31:10.659209556 +0200
-@@ -0,0 +1,807 @@
++++ b/resultsmech_ub21.f	2026-07-30 09:40:23.318411678 +0200
+@@ -0,0 +1,813 @@
 +!
 +!     CalculiX - A 3-dimensional finite element program
 +!              Copyright (C) 1998-2025 Guido Dhondt
@@ -2585,7 +2584,8 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +     &  u_loc_beam(12), f_local(12), axial_f, vy, vz, tx, my, mz,
 +     &  cy, cz, sigma_axial, tau_xy, tau_xz, tau_tor, sigma_max,
 +     &  diag_val, factor, x_loc, w1, w2, alpha, beta, mz_x, my_x,
-+     &  sigma_x, w_load_val, xi_station, m1_eq_y, m2_eq_y, m1_eq_z,
++     &  sigma_x, sigma_b_y, sigma_b_z, w_load_val, xi_station,
++     &  m1_eq_y, m2_eq_y, m1_eq_z,
 +     &  m2_eq_z, M1_y, M2_y, M1_z, M2_z, M0_y, M0_z, R1, R2,
 +     &  phi_y, phi_z
 +      integer station_i, load_dir, load_type
@@ -3018,15 +3018,17 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +     &                                   tm(3,j)*f_local(12)
 +      enddo
 +!
-+!     internal forces/moments at representative node
++!     internal forces/moments at representative node (node 2)
++!
 +      axial_f = f_local(7)
 +      vy      = f_local(8)
 +      vz      = f_local(9)
 +      tx      = f_local(10)
-+      my      = f_local(11)
-+      mz      = f_local(12)
++      my      = 0.5d0 * (f_local(5) - f_local(11))
++      mz      = 0.5d0 * (-f_local(6) + f_local(12))
 +!
-+!     cross-section outer fiber dimensions for stress recovery
++!     outer fiber coordinates for combined stress calculation
++!
 +      if (nint(sect_type) .eq. 1) then
 +         cy = dims(1)/2.d0
 +         cz = dims(2)/2.d0
@@ -3034,37 +3036,34 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +         cy = dims(1)
 +         cz = dims(1)
 +      elseif (nint(sect_type) .eq. 3) then
-+         cy = dims(1)/2.d0
-+         cz = dims(2)/2.d0
++         cy = max(dims(2), dims(4))/2.d0
++         cz = dims(1)/2.d0
 +      elseif (nint(sect_type) .eq. 4) then
-+         ! T-section (dims: b_flange, h_total, t_flange, t_web)
-+         w1 = dims(1)*dims(3)
-+         w2 = dims(4)*(dims(2)-dims(3))
-+         alpha = (w1*(dims(3)/2.d0) + 
-+     &            w2*(dims(3)+(dims(2)-dims(3))/2.d0))/(w1+w2)
-+         cy = dims(1)/2.d0
-+         cz = max(alpha, dims(2) - alpha)
++         ! T-section (dims: h, b, t_f, t_w)
++         cy = dims(2)/2.d0
++         w1 = dims(2)*dims(3)
++         w2 = dims(4)*(dims(1)-dims(3))
++         alpha = (w1*(dims(1)-dims(3)/2.d0) + 
++     &            w2*(dims(1)-dims(3))/2.d0)/(w1+w2)
++         cz = max(alpha, dims(1) - alpha)
 +      elseif (nint(sect_type) .eq. 5) then
-+         ! Channel-section (dims: b_flange, h_total, t_flange, t_web)
-+         w1 = 2.d0*dims(1)*dims(3)
-+         w2 = dims(4)*(dims(2)-2.d0*dims(3))
-+         alpha = (w1*(dims(3)/2.d0) + 
-+     &            w2*(dims(4)/2.d0))/(w1+w2)
-+         cy = max(alpha, dims(1) - alpha)
-+         cz = dims(2)/2.d0
++         cy = dims(2)/2.d0
++         cz = dims(1)/2.d0
 +      elseif (nint(sect_type) .eq. 6) then
-+         ! Angle-section (dims: b_leg1, h_leg2, t_leg1, t_leg2)
-+         w1 = dims(1)*dims(3)
-+         w2 = dims(4)*(dims(2)-dims(3))
-+         alpha = (w1*(dims(1)/2.d0) + 
-+     &            w2*(dims(4)/2.d0))/(w1+w2)
-+         beta = (w1*(dims(3)/2.d0) + 
-+     &           w2*(dims(3)+(dims(2)-dims(3))/2.d0))/(w1+w2)
++         ! L-section (dims: b, h, t)
++         w1 = dims(3)*dims(2)
++         w2 = (dims(1)-dims(3))*dims(3)
++         alpha = (w1*(dims(3)/2.d0) + 
++     &            w2*(dims(3)+(dims(1)-dims(3))/2.d0))/(w1+w2)
++         beta = (w1*(dims(2)/2.d0) + w2*(dims(3)/2.d0))/(w1+w2)
 +         cy = max(alpha, dims(1) - alpha)
 +         cz = max(beta, dims(2) - beta)
++      elseif (nint(sect_type) .eq. 7) then
++         cy = dims(2)/2.d0
++         cz = dims(1)/2.d0
 +      else
-+         cy = dims(1)/2.d0
-+         cz = dims(2)/2.d0
++         cy = 0.05d0
++         cz = 0.05d0
 +      endif
 +!
 +!     compute stress values
@@ -3076,7 +3075,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +      tau_xz = vz / (a * xk_z)
 +      tau_tor = tx * max(cy,cz) / j_tors
 +!
-+!     write continuous diagram along element length to ub21_beam_forces.csv
++!     write continuous diagram along element length to beam_stresses.txt
 +!
 +      w1        = prop(index+24)
 +      w2        = prop(index+25)
@@ -3315,34 +3314,31 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/resultsmech_ub21.f b/resul
 +      endif
 +!
 +      return
++      end
+diff -u -N a/resultsmech_u.f b/resultsmech_u.f
+--- a/resultsmech_u.f
++++ b/resultsmech_u.f
+@@ -68,6 +68,19 @@
+      &        ncmat_,nstate_,stiini,vini,ener,eei,enerini,istep,iinc,
       &        reltime,calcul_fn,calcul_qa,calcul_cauchy,nener,
       &        ikin,nal,ne0,thicke,emeini,nelem,ielprop,prop,t0g,t1g)
--      elseif(lakon(nelem)(2:4).eq.'S45') then
 +      elseif(lakon(nelem)(2:4).eq.'B21') then
- !
--!     user element us45 flat shell element with 4 nodes (5dof)
-+!     user element ub21 linear beam
- !
--         call resultsmech_us45(co,kon,ipkon,lakon,ne,v,
--     &        stx,elcon,nelcon,rhcon,nrhcon,alcon,nalcon,alzero,
--     &        ielmat,ielorien,norien,orab,ntmat_,t0,t1,ithermal,prestr,
--     &        iprestr,eme,iperturb,fn,iout,qa,vold,nmethod,
--     &        veold,dtime,time,ttime,plicon,nplicon,plkcon,nplkcon,
--     &        xstateini,xstiff,xstate,npmat_,matname,mi,ielas,icmd,
--     &        ncmat_,nstate_,stiini,vini,ener,eei,enerini,istep,iinc,
--     &        reltime,calcul_fn,calcul_qa,calcul_cauchy,nener,
--     &        ikin,nal,ne0,thicke,emeini,nelem,ielprop,prop,t0g,t1g)
--!
--       elseif(lakon(nelem)(2:3).eq.'S3') then
--!     
--!     user element us3 flat shell element with 3 nodes (6dof)
--!     
--         call resultsmech_us3(co,kon,ipkon,lakon,ne,v,
++!
++!     user element ub21 euler-bernoulli beam (2 nodes, 6 dof/node)
++!
 +         call resultsmech_ub21(co,kon,ipkon,lakon,ne,v,
-      &        stx,elcon,nelcon,rhcon,nrhcon,alcon,nalcon,alzero,
-      &        ielmat,ielorien,norien,orab,ntmat_,t0,t1,ithermal,prestr,
-      &        iprestr,eme,iperturb,fn,iout,qa,vold,nmethod,
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/saved_loads.f b/saved_loads.f
++     &        stx,elcon,nelcon,rhcon,nrhcon,alcon,nalcon,alzero,
++     &        ielmat,ielorien,norien,orab,ntmat_,t0,t1,ithermal,prestr,
++     &        iprestr,eme,iperturb,fn,iout,qa,vold,nmethod,
++     &        veold,dtime,time,ttime,plicon,nplicon,plkcon,nplkcon,
++     &        xstateini,xstiff,xstate,npmat_,matname,mi,ielas,icmd,
++     &        ncmat_,nstate_,stiini,vini,ener,eei,enerini,istep,iinc,
++     &        reltime,calcul_fn,calcul_qa,calcul_cauchy,nener,
++     &        ikin,nal,ne0,thicke,emeini,nelem,ielprop,prop,t0g,t1g)
+       elseif(lakon(nelem)(2:4).eq.'S45') then
+ !
+ !     user element us45 flat shell element with 4 nodes (5dof)
+diff -u -N a/saved_loads.f b/saved_loads.f
 --- a/saved_loads.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/saved_loads.f	2026-07-29 08:19:03.462092091 +0200
 @@ -0,0 +1,8 @@
@@ -3354,7 +3350,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/saved_loads.f b/saved_load
 +!       the number of evaluation stations written to .frd.
 +        real*8, allocatable, save :: ub21_stx(:,:,:)
 +      end module saved_loads
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/ub21_module.f b/ub21_module.f
+diff -u -N a/ub21_module.f b/ub21_module.f
 --- a/ub21_module.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/ub21_module.f	2026-07-29 08:31:00.351571884 +0200
 @@ -0,0 +1,18 @@
@@ -3376,7 +3372,7 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/ub21_module.f b/ub21_modul
 +        real*8, allocatable, save :: ff_saved(:,:)
 +        real*8, allocatable, save :: ub21_stx(:,:,:)
 +      end module ub21_module
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/userbeamsections.f b/userbeamsections.f
+diff -u -N a/userbeamsections.f b/userbeamsections.f
 --- a/userbeamsections.f	1970-01-01 01:00:00.000000000 +0100
 +++ b/userbeamsections.f	2026-07-16 20:36:43.081675055 +0200
 @@ -0,0 +1,579 @@
@@ -3959,9 +3955,9 @@ diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/userbeamsections.f b/userb
 +!
 +      return
 +      end
-diff -u -N -x '*.o' -x '*.a' -x ccx_2.23 -x '*.mod' a/usersections.f b/usersections.f
---- a/usersections.f	2025-10-19 18:21:26.063425747 +0200
-+++ b/usersections.f	2026-07-16 20:14:47.704138227 +0200
+diff -u -N a/usersections.f b/usersections.f
+--- a/usersections.f
++++ b/usersections.f
 @@ -40,6 +40,11 @@
  !     
        real*8 prop(*)
