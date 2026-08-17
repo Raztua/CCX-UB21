@@ -51,26 +51,6 @@ This implementation provides high-accuracy 3D beam modeling with complete rotati
 
 ---
 
-## 📁 Repository Structure
-
-```text
-CCX-CB/
-├── CalculiX/                     # CalculiX CCX 2.23 source tree with SPOOLES & ARPACK
-│   └── ccx_2.23/src/             # CCX core routines and patched Fortran/C modules
-├── cgx_2.23.all/                 # CalculiX GraphiX (CGX 2.23) source tree
-├── ub21_source_files/            # Pure Fortran modules for the UB21 patch
-├── ub21_ccx223.patch             # Unified diff patch for a clean CCX 2.23 tree
-├── install_ub21.sh               # Automated installer & compiler script
-├── UB21_CCX223_Manual.md         # Comprehensive User Manual, Theory & Deck Reference
-├── CGX_UB21_Guide.md             # CGX Visualization & Post-Processing Guide
-├── run_global_verification.py    # 10-Batch verification suite across all 7 shapes
-├── run_full_validation.py        # Static, modal, transient dynamic & Nastran 95 tests
-├── global_verification_report.md # Verification report against analytical baselines
-└── README.md                     # Project README
-```
-
----
-
 ## 🛠 Installation Guide
 
 ### Option 1: Automated 1-Command Installation (Recommended)
