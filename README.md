@@ -14,7 +14,6 @@ This implementation provides high-accuracy 3D beam modeling with complete rotati
 
 ## 📑 Table of Contents
 - [Key Features](#-key-features)
-- [Repository Structure](#-repository-structure)
 - [Installation Guide](#-installation-guide)
   - [Automated 1-Command Installation](#option-1-automated-1-command-installation-recommended)
   - [Manual Installation (Linux / macOS)](#option-2-manual-installation-linux--macos)
