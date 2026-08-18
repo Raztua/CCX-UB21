@@ -1093,34 +1093,41 @@ c     Bernhardi end
               nope=1
               nopeexp=1
             elseif(label(1:1).eq.'U') then
+              if(label(1:5).eq.'UCONN'.or.label(1:6).eq.'UCONN6') then
+                mi(1)=max(mi(1),1)
+                mi(2)=max(mi(2),6)
+                nope=2
+                nopeexp=2
+              else
 !     
 !     the number uniquely characterizes the
 !     element name (consisting of 4 freely
 !     selectable characters in position 2..5)
 !     
-              number=ichar(label(2:2))*256**3+
+                number=ichar(label(2:2))*256**3+
      &             ichar(label(3:3))*256**2+
      &             ichar(label(4:4))*256+
      &             ichar(label(5:5))
-              nope=-1
-              call nidentk(iuel,number,nuel,id,four)
-              if(id.gt.0) then
-                if(iuel(1,id).eq.number) then
-                  mi(1)=max(mi(1),iuel(2,id))
-                  mi(2)=max(mi(2),iuel(3,id))
-                  nope=iuel(4,id)
-                  nopeexp=nope
+                nope=-1
+                call nidentk(iuel,number,nuel,id,four)
+                if(id.gt.0) then
+                  if(iuel(1,id).eq.number) then
+                    mi(1)=max(mi(1),iuel(2,id))
+                    mi(2)=max(mi(2),iuel(3,id))
+                    nope=iuel(4,id)
+                    nopeexp=nope
+                  endif
                 endif
-              endif
-              if(nope.eq.-1) then
-                write(*,*) '*ERROR reading *ELEMENT'
-                write(*,*) '       nonexistent element type:'
-                write(*,*) '       ',label
-                call inputerror(inpc,ipoinpc,iline,
-     &               "*ELEMENT%",ier)
-                call getnewline(inpc,textpart,istat,n,key,iline,ipol,
-     &               inl,ipoinp,inp,ipoinpc)
-                cycle loop
+                if(nope.eq.-1) then
+                  write(*,*) '*ERROR reading *ELEMENT'
+                  write(*,*) '       nonexistent element type:'
+                  write(*,*) '       ',label
+                  call inputerror(inpc,ipoinpc,iline,
+     &                 "*ELEMENT%",ier)
+                  call getnewline(inpc,textpart,istat,n,key,iline,ipol,
+     &                 inl,ipoinp,inp,ipoinpc)
+                  cycle loop
+                endif
               endif
             endif
             if(label(1:1).eq.'F') then
@@ -2633,6 +2640,34 @@ c            nmpc_=nmpc_+3
       elseif(textpart(1)(1:16).eq.'*USERBEAMSECTION') then
 !       Reserve 27 properties per user beam section + 1 safety buffer for pointer shift
         nprop_=nprop_+28
+        mi(3)=max(mi(3),2)
+        do
+          call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,
+     &         ipoinp,inp,ipoinpc)
+          if((istat.lt.0).or.(key.eq.1)) exit
+        enddo
+      elseif(textpart(1)(1:16).eq.'*USERBEAMRELEASE') then
+        do
+          call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,
+     &         ipoinp,inp,ipoinpc)
+          if((istat.lt.0).or.(key.eq.1)) exit
+        enddo
+      elseif(textpart(1)(1:15).eq.'*USERBEAMOUTPUT' .or.
+     &       textpart(1)(1:16).eq.'*USERBEAMOUTPUT') then
+        do
+          call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,
+     &         ipoinp,inp,ipoinpc)
+          if((istat.lt.0).or.(key.eq.1)) exit
+        enddo
+      elseif(textpart(1)(1:20).eq.'*USERCONNECTOROUTPUT') then
+        do
+          call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,
+     &         ipoinp,inp,ipoinpc)
+          if((istat.lt.0).or.(key.eq.1)) exit
+        enddo
+      elseif(textpart(1)(1:14).eq.'*USERCONNECTOR') then
+!       Reserve 16 properties per connector definition + 1 safety buffer
+        nprop_=nprop_+17
         mi(3)=max(mi(3),2)
         do
           call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,

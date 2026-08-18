@@ -101,6 +101,19 @@
      &       ne0,ipkon,thicke,integerglob,doubleglob,tieset,istartset,
      &       iendset,ialset,ntie,nasym,ielprop,prop)
 !        
+      elseif(lakonl(1:5).eq.'UCONN') then
+        call e_c3d_uconn6(co,kon,lakonl,p1,p2,omx,bodyfx,nbody,s,sm,
+     &       ff,nelem,nmethod,elcon,nelcon,rhcon,nrhcon,alcon,nalcon,
+     &       alzero,ielmat,ielorien,norien,orab,ntmat_,
+     &       t0,t1,ithermal,vold,iperturb,nelemload,
+     &       sideload,xload,nload,idist,sti,stx,iexpl,plicon,
+     &       nplicon,plkcon,nplkcon,xstiff,npmat_,dtime,
+     &       matname,mi,ncmat_,mass,stiffness,buckling,rhsi,intscheme,
+     &       ttime,time,istep,iinc,coriolis,xloadold,reltime,
+     &       ipompc,nodempc,coefmpc,nmpc,ikmpc,ilmpc,veold,
+     &       ne0,ipkon,thicke,integerglob,doubleglob,tieset,istartset,
+     &       iendset,ialset,ntie,nasym,ielprop,prop)
+!        
 
       else
 !

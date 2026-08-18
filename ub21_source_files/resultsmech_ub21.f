@@ -83,8 +83,16 @@
      &  sigma_x, sigma_b_y, sigma_b_z, w_load_val, xi_station,
      &  m1_eq_y, m2_eq_y, m1_eq_z,
      &  m2_eq_z, M1_y, M2_y, M1_z, M2_z, M0_y, M0_z, R1, R2,
-     &  phi_y, phi_z
-      integer station_i, load_dir, load_type
+     &  phi_y, phi_z, vy_x, vz_x,
+     &  spring_k(12), col_r(12), denom, ks, s_rr
+      integer station_i, load_dir, load_type, station_k, num_sub
+      integer station_pct, m_idx, itarg, iunit
+      logical is_active_inc, is_open, has_target
+      real*8 ux_val, uy_val, uz_val, rx_val, ry_val, rz_val
+      real*8 h1, h2, h3, h4, dh1, dh2, dh3, dh4, vh, wh
+      real*8 thetazh, thetayh, v0, w0, thetaz0, thetay0
+      real*8 qx_val, qy_val, qz_val
+      real*8 f_csv(3), m_csv(3), u_csv(3), rot_csv(3), q_csv(3)
       character*80 amat
 !
 !
@@ -127,8 +135,23 @@
          offsets(2,2)=prop(index+13)
          offsets(3,2)=prop(index+14)
          
-         release_codes(1)=nint(prop(index+15))
-         release_codes(2)=nint(prop(index+16))
+         if (allocated(ielrelease)) then
+            if (nelem .le. size(ielrelease, 2) .and.
+     &          ielrelease(1, nelem) .ge. 0) then
+               release_codes(1) = ielrelease(1, nelem)
+            else
+               release_codes(1) = nint(prop(index+15))
+            endif
+            if (nelem .le. size(ielrelease, 2) .and.
+     &          ielrelease(2, nelem) .ge. 0) then
+               release_codes(2) = ielrelease(2, nelem)
+            else
+               release_codes(2) = nint(prop(index+16))
+            endif
+         else
+            release_codes(1) = nint(prop(index+15))
+            release_codes(2) = nint(prop(index+16))
+         endif
          
          e2_in(1)=prop(index+17)
          e2_in(2)=prop(index+18)
@@ -343,7 +366,7 @@
       e3(2)=e1_curr(3)*e2(1)-e1_curr(1)*e2(3)
       e3(3)=e1_curr(1)*e2(2)-e1_curr(2)*e2(1)
 
-!     populate tm with axes (use initial un-deformed axes for linear static)
+!     populate tm with axes (initial un-deformed for linear static)
       if (iperturb(1) .le. 1) then
          e3_init(1)=e1_init(2)*e2_init(3)-e1_init(3)*e2_init(2)
          e3_init(2)=e1_init(3)*e2_init(1)-e1_init(1)*e2_init(3)
@@ -446,41 +469,85 @@
          u_loc_beam(k+6) = u_loc_node(k+6)
       enddo
 !
-!     stiffness condensation for releases
+!     stiffness condensation for releases & semi-rigid springs
 !
       do k=1,12
          released(k) = .false.
+         spring_k(k) = 0.d0
       enddo
       do inode = 1, nope
          code = release_codes(inode)
          r = (inode-1)*6
          if (code .gt. 0) then
-            if (iand(code, 1) .ne. 0) released(r+1) = .true.
-            if (iand(code, 2) .ne. 0) released(r+2) = .true.
-            if (iand(code, 4) .ne. 0) released(r+3) = .true.
-            if (iand(code, 8) .ne. 0) released(r+4) = .true.
-            if (iand(code, 16) .ne. 0) released(r+5) = .true.
-            if (iand(code, 32) .ne. 0) released(r+6) = .true.
+            if (iand(code, 1) .ne. 0) then
+               released(r+1) = .true.
+               if (allocated(relspring)) then
+                  if (nelem .le. size(relspring,3)) then
+                     spring_k(r+1) = relspring(1, inode, nelem)
+                  endif
+               endif
+            endif
+            if (iand(code, 2) .ne. 0) then
+               released(r+2) = .true.
+               if (allocated(relspring)) then
+                  if (nelem .le. size(relspring,3)) then
+                     spring_k(r+2) = relspring(2, inode, nelem)
+                  endif
+               endif
+            endif
+            if (iand(code, 4) .ne. 0) then
+               released(r+3) = .true.
+               if (allocated(relspring)) then
+                  if (nelem .le. size(relspring,3)) then
+                     spring_k(r+3) = relspring(3, inode, nelem)
+                  endif
+               endif
+            endif
+            if (iand(code, 8) .ne. 0) then
+               released(r+4) = .true.
+               if (allocated(relspring)) then
+                  if (nelem .le. size(relspring,3)) then
+                     spring_k(r+4) = relspring(4, inode, nelem)
+                  endif
+               endif
+            endif
+            if (iand(code, 16) .ne. 0) then
+               released(r+5) = .true.
+               if (allocated(relspring)) then
+                  if (nelem .le. size(relspring,3)) then
+                     spring_k(r+5) = relspring(5, inode, nelem)
+                  endif
+               endif
+            endif
+            if (iand(code, 32) .ne. 0) then
+               released(r+6) = .true.
+               if (allocated(relspring)) then
+                  if (nelem .le. size(relspring,3)) then
+                     spring_k(r+6) = relspring(6, inode, nelem)
+                  endif
+               endif
+            endif
          endif
       enddo
 !
       do r = 1, 12
          if (released(r)) then
-            diag_val = s(r,r)
-            if (dabs(diag_val) .gt. 1.d-12) then
+            s_rr = s(r,r)
+            ks = spring_k(r)
+            if (ks .lt. 0.d0) ks = 0.d0
+            denom = s_rr + ks
+            if (dabs(denom) .gt. 1.d-12) then
                do k = 1, 12
-                  if (k .eq. r) cycle
-                  factor = s(k,r) / s(r,r)
+                  col_r(k) = s(k,r)
+               enddo
+               do k = 1, 12
                   do j = 1, 12
-                     if (j .eq. r) cycle
-                     s(k,j) = s(k,j) - factor * s(r,j)
+                     s(k,j) = s(k,j) - (col_r(k) * col_r(j)) / denom
                   enddo
                enddo
-               do k = 1, 12
-                  s(k,r) = 0.d0
-                  s(r,k) = 0.d0
-               enddo
-               s(r,r) = 1.d-9 * diag_val
+               if (ks .le. 1.d-12) then
+                  s(r,r) = 1.d-9 * s_rr
+               endif
             endif
          endif
       enddo
@@ -592,18 +659,7 @@
          ub21_stx = 0.d0
       endif
 
-      if (nelem .eq. 1 .and. istep .eq. 1) then
-         open(99, file="ub21_beam_forces.csv", status="unknown", 
-     &        position="rewind")
-         write(99, '(A)') "Step,Element,Station_Pct,X_local,"//
-     &        "Fx_Axial,Vy_Shear,Vz_Shear,Mx_Torsion,My_Bending,"//
-     &        "Mz_Bending,Sxx_Axial,Sxx_Bending_Y,Sxx_Bending_Z,"//
-     &        "Sxx_Max_Combined,Sxy_Shear,Sxz_Shear,Stors_Torsion"
-      else
-         open(99, file="ub21_beam_forces.csv", status="unknown", 
-     &        position="append")
-      endif
-      
+!     1. Populate standard 11 stations for .frd and CCX internal use
       do station_i = 0, 10
          xi_station = dble(station_i) / 10.d0
          x_loc = xi_station * dl
@@ -670,6 +726,19 @@
          my_x = M1_y * (1.d0 - xi_station) + M2_y * xi_station + M0_y
          mz_x = M1_z * (1.d0 - xi_station) + M2_z * xi_station + M0_z
          
+         ! Station shear forces
+         vy_x = f_local(8)
+         vz_x = f_local(9)
+         if (load_dir .eq. 1) then
+            if (load_type .eq. 1) then
+               vy_x = -f_local(2) - w1 * x_loc
+            endif
+         elseif (load_dir .eq. 2) then
+            if (load_type .eq. 1) then
+               vz_x = -f_local(3) - w1 * x_loc
+            endif
+         endif
+         
          ! Individual stress components at station x
          sigma_b_y = dabs(my_x) * cz / xi22
          sigma_b_z = dabs(mz_x) * cy / xi11
@@ -682,17 +751,261 @@
          ub21_stx(4, station_i+1, nelem) = tau_tor
          ub21_stx(5, station_i+1, nelem) = my_x
          ub21_stx(6, station_i+1, nelem) = mz_x
-
-         ! Write all 6 forces & moments and all 6 stress components to CSV
-         write(99, 1000) istep, nelem, station_i*10, x_loc, 
-     &        axial_f, f_local(8), f_local(9), f_local(10), 
-     &        my_x, mz_x, sigma_axial, sigma_b_y, sigma_b_z, 
-     &        sigma_x, tau_xy, tau_xz, tau_tor
- 1000    format(I4,',',I8,',',I4,',',F10.4,',',F16.4,',',F16.4,',',
-     &        F16.4,',',F16.4,',',F16.4,',',F16.4,',',F16.4,',',
-     &        F16.4,',',F16.4,',',F16.4,',',F16.4,',',F16.4,',',F16.4)
       enddo
-      close(99)
+
+!     2. Dynamic Multi-Station CSV Results Streaming (*USER BEAM OUTPUT)
+      if (.not. out_active) goto 880
+
+!     Check increment filter
+      call check_ub21_inc_active(istep, iinc, iout, out_inc_mode, 
+     &     out_inc_freq, out_inc_list, out_ninc_list, is_active_inc)
+      if (.not. is_active_inc) goto 880
+
+!     Check if element belongs to any active target
+      has_target = .false.
+      if (allocated(out_elem_active)) then
+         if (nelem .le. size(out_elem_active, 1)) then
+            do itarg = 1, out_num_targets
+               if (out_elem_active(nelem, itarg)) then
+                  has_target = .true.
+                  exit
+               endif
+            enddo
+         endif
+      endif
+      if (.not. has_target) goto 880
+
+!     Open CSV unit(s) if not yet open
+      do itarg = 1, out_num_targets
+         if (out_elem_active(nelem, itarg)) then
+            iunit = 90 + itarg
+            inquire(unit=iunit, opened=is_open)
+            if (.not. is_open) then
+               if (istep .eq. 1 .and. iinc .le. 1 .and. 
+     &             .not. out_target_file_init(itarg)) then
+                  open(iunit, file=trim(out_target_filename(itarg)), 
+     &                 status="unknown", position="rewind")
+                  call write_ub21_csv_header(iunit, out_flag_f, 
+     &                 out_flag_u, out_flag_s, out_flag_q)
+                  out_target_file_init(itarg) = .true.
+               else
+                  open(iunit, file=trim(out_target_filename(itarg)), 
+     &                 status="unknown", position="append")
+               endif
+            endif
+         endif
+      enddo
+
+!     Evaluate along span with N subdivisions (N+1 stations)
+      num_sub = max(1, out_subdivisions)
+      do station_k = 0, num_sub
+         xi_station = dble(station_k) / dble(num_sub)
+         x_loc = xi_station * dl
+         station_pct = nint(xi_station * 100.d0)
+
+         ! Free bending moment M0(x)
+         M0_y = 0.d0
+         M0_z = 0.d0
+         if (load_dir .eq. 1) then
+            if (load_type .eq. 1) then
+               M0_z = 0.5d0 * w1 * x_loc * (dl - x_loc)
+            elseif (load_type .eq. 2) then
+               if (w1 .eq. 0.d0) then
+                  M0_z = (w2 * (dl**2) / 6.d0) * 
+     &                   (xi_station - xi_station**3)
+               else
+                  M0_z = (w1 * (dl**2) / 6.d0) * 
+     &                   (2.d0*xi_station - 3.d0*xi_station**2 + 
+     &                    xi_station**3)
+               endif
+            elseif (load_type .eq. 3) then
+               R1 = w1 * dl * (beta - alpha) * 
+     &              (1.d0 - 0.5d0 * (alpha + beta))
+               R2 = w1 * dl * (beta - alpha) * 
+     &              0.5d0 * (alpha + beta)
+               if (x_loc .lt. alpha * dl) then
+                  M0_z = R1 * x_loc
+               elseif (x_loc .gt. beta * dl) then
+                  M0_z = R2 * (dl - x_loc)
+               else
+                  M0_z = R1 * x_loc - 0.5d0 * w1 * 
+     &                   ((x_loc - alpha * dl)**2)
+               endif
+            endif
+         elseif (load_dir .eq. 2) then
+            if (load_type .eq. 1) then
+               M0_y = -0.5d0 * w1 * x_loc * (dl - x_loc)
+            elseif (load_type .eq. 2) then
+               if (w1 .eq. 0.d0) then
+                  M0_y = -(w2 * (dl**2) / 6.d0) * 
+     &                   (xi_station - xi_station**3)
+               else
+                  M0_y = -(w1 * (dl**2) / 6.d0) * 
+     &                   (2.d0*xi_station - 3.d0*xi_station**2 + 
+     &                    xi_station**3)
+               endif
+            elseif (load_type .eq. 3) then
+               R1 = w1 * dl * (beta - alpha) * 
+     &              (1.d0 - 0.5d0 * (alpha + beta))
+               R2 = w1 * dl * (beta - alpha) * 
+     &              0.5d0 * (alpha + beta)
+               if (x_loc .lt. alpha * dl) then
+                  M0_y = -R1 * x_loc
+               elseif (x_loc .gt. beta * dl) then
+                  M0_y = -R2 * (dl - x_loc)
+               else
+                  M0_y = -R1 * x_loc + 0.5d0 * w1 * 
+     &                   ((x_loc - alpha * dl)**2)
+               endif
+            endif
+         endif
+         
+         my_x = M1_y * (1.d0 - xi_station) + M2_y * xi_station + M0_y
+         mz_x = M1_z * (1.d0 - xi_station) + M2_z * xi_station + M0_z
+         
+         vy_x = f_local(8)
+         vz_x = f_local(9)
+         if (load_dir .eq. 1) then
+            if (load_type .eq. 1) then
+               vy_x = -f_local(2) - w1 * x_loc
+            endif
+         elseif (load_dir .eq. 2) then
+            if (load_type .eq. 1) then
+               vz_x = -f_local(3) - w1 * x_loc
+            endif
+         endif
+         
+         sigma_b_y = dabs(my_x) * cz / xi22
+         sigma_b_z = dabs(mz_x) * cy / xi11
+         sigma_x   = dabs(sigma_axial) + sigma_b_y + sigma_b_z
+
+         ! Displacements along span via Hermite shape functions + sag
+         ux_val = (1.d0 - xi_station) * u_loc_beam(1) + 
+     &            xi_station * u_loc_beam(7)
+         rx_val = (1.d0 - xi_station) * u_loc_beam(4) + 
+     &            xi_station * u_loc_beam(10)
+
+         h1 = 1.d0 - 3.d0*(xi_station**2) + 2.d0*(xi_station**3)
+         h2 = xi_station - 2.d0*(xi_station**2) + (xi_station**3)
+         h3 = 3.d0*(xi_station**2) - 2.d0*(xi_station**3)
+         h4 = -(xi_station**2) + (xi_station**3)
+
+         dh1 = -6.d0*xi_station + 6.d0*(xi_station**2)
+         dh2 = 1.d0 - 4.d0*xi_station + 3.d0*(xi_station**2)
+         dh3 = 6.d0*xi_station - 6.d0*(xi_station**2)
+         dh4 = -2.d0*xi_station + 3.d0*(xi_station**2)
+
+         vh = h1*u_loc_beam(2) + dl*h2*u_loc_beam(6) + 
+     &        h3*u_loc_beam(8) + dl*h4*u_loc_beam(12)
+         thetazh = (dh1*u_loc_beam(2) + dh3*u_loc_beam(8))/dl + 
+     &             dh2*u_loc_beam(6) + dh4*u_loc_beam(12)
+
+         wh = h1*u_loc_beam(3) - dl*h2*u_loc_beam(5) + 
+     &        h3*u_loc_beam(9) - dl*h4*u_loc_beam(11)
+         thetayh = -((dh1*u_loc_beam(3) + dh3*u_loc_beam(9))/dl - 
+     &               dh2*u_loc_beam(5) - dh4*u_loc_beam(11))
+
+         v0 = 0.d0
+         w0 = 0.d0
+         thetaz0 = 0.d0
+         thetay0 = 0.d0
+         if (load_dir .eq. 1 .and. load_type .eq. 1) then
+            v0 = (w1 * x_loc * (dl - x_loc) * 
+     &           (dl**2 + x_loc*(dl - x_loc))) / (24.d0 * e * xi11)
+            thetaz0 = (w1 * (dl**3 - 6.d0*dl*(x_loc**2) + 
+     &                4.d0*(x_loc**3))) / (24.d0 * e * xi11)
+         elseif (load_dir .eq. 2 .and. load_type .eq. 1) then
+            w0 = (w1 * x_loc * (dl - x_loc) * 
+     &           (dl**2 + x_loc*(dl - x_loc))) / (24.d0 * e * xi22)
+            thetay0 = -(w1 * (dl**3 - 6.d0*dl*(x_loc**2) + 
+     &                4.d0*(x_loc**3))) / (24.d0 * e * xi22)
+         endif
+
+         uy_val = vh + v0
+         uz_val = wh + w0
+         ry_val = thetayh + thetay0
+         rz_val = thetazh + thetaz0
+
+         ! Active distributed loads at station
+         qx_val = 0.d0
+         qy_val = 0.d0
+         qz_val = 0.d0
+         if (load_dir .eq. 1) then
+            if (load_type .eq. 1) then
+               qy_val = w1
+            elseif (load_type .eq. 2) then
+               qy_val = w1*(1.d0 - xi_station) + w2*xi_station
+            elseif (load_type .eq. 3) then
+               if (x_loc .ge. alpha*dl .and. x_loc .le. beta*dl) then
+                  qy_val = w1
+               endif
+            endif
+         elseif (load_dir .eq. 2) then
+            if (load_type .eq. 1) then
+               qz_val = w1
+            elseif (load_type .eq. 2) then
+               qz_val = w1*(1.d0 - xi_station) + w2*xi_station
+            elseif (load_type .eq. 3) then
+               if (x_loc .ge. alpha*dl .and. x_loc .le. beta*dl) then
+                  qz_val = w1
+               endif
+            endif
+         endif
+
+         ! Coordinate system transformation
+         if (out_coords .eq. 2) then
+            ! Global coordinates: T^T * v_local
+            do m_idx = 1, 3
+               f_csv(m_idx) = axial_f*e1(m_idx) + vy_x*e2(m_idx) + 
+     &                        vz_x*e3(m_idx)
+               m_csv(m_idx) = f_local(10)*e1(m_idx) + my_x*e2(m_idx) + 
+     &                        mz_x*e3(m_idx)
+               u_csv(m_idx) = ux_val*e1(m_idx) + uy_val*e2(m_idx) + 
+     &                        uz_val*e3(m_idx)
+               rot_csv(m_idx) = rx_val*e1(m_idx) + ry_val*e2(m_idx) + 
+     &                          rz_val*e3(m_idx)
+               q_csv(m_idx) = qx_val*e1(m_idx) + qy_val*e2(m_idx) + 
+     &                        qz_val*e3(m_idx)
+            enddo
+         else
+            ! Local beam coordinates
+            f_csv(1) = axial_f
+            f_csv(2) = vy_x
+            f_csv(3) = vz_x
+            m_csv(1) = f_local(10)
+            m_csv(2) = my_x
+            m_csv(3) = mz_x
+            u_csv(1) = ux_val
+            u_csv(2) = uy_val
+            u_csv(3) = uz_val
+            rot_csv(1) = rx_val
+            rot_csv(2) = ry_val
+            rot_csv(3) = rz_val
+            q_csv(1) = qx_val
+            q_csv(2) = qy_val
+            q_csv(3) = qz_val
+         endif
+
+         ! Write row to all matching target CSV files
+         do itarg = 1, out_num_targets
+            if (out_elem_active(nelem, itarg)) then
+               iunit = 90 + itarg
+               call write_ub21_station_row(iunit, istep, iinc, time,
+     &              nelem, station_pct, x_loc, out_flag_f, f_csv,
+     &              m_csv, out_flag_u, u_csv, rot_csv, out_flag_s, 
+     &              sigma_axial, sigma_b_y, sigma_b_z, sigma_x, 
+     &              tau_xy, tau_xz, tau_tor, out_flag_q, q_csv)
+            endif
+         enddo
+      enddo
+
+      do itarg = 1, out_num_targets
+         if (out_elem_active(nelem, itarg)) then
+            flush(90 + itarg)
+         endif
+      enddo
+
+ 880  continue
 !
 !     populate stx array for .frd output:
 !     stx(1) = Combined Max Normal Stress sigma_max (Axial + Bending)
@@ -704,7 +1017,7 @@
 !
 !     also fill stx(1..mi(1)) with end-point values for CCX internal use
       do j=1,mi(1)
-         ! For CCX internal stx: station 1 -> xi=0.0, last station -> xi=1.0
+         ! For CCX internal stx: station 1 -> xi=0.0, last -> xi=1.0
          if (j .le. 11) then
             station_i = j - 1
             xi_station = dble(station_i) / 10.d0
@@ -811,3 +1124,124 @@
 !
       return
       end
+!
+! ======================================================================
+!     Helper routine to write dynamic CSV header
+! ======================================================================
+      subroutine write_ub21_csv_header(iunit, flag_f, flag_u,
+     &     flag_s, flag_q)
+      implicit none
+      integer iunit
+      logical flag_f, flag_u, flag_s, flag_q
+      character*500 h_line
+!
+      h_line = 'Step,Increment,Time,Element,Station_Pct,X_local'
+      if (flag_f) then
+         h_line = trim(h_line) //
+     &        ',Fx_Axial,Vy_Shear,Vz_Shear,Mx_Torsion,'//
+     &        'My_Bending,Mz_Bending'
+      endif
+      if (flag_u) then
+         h_line = trim(h_line) //
+     &        ',Ux,Uy,Uz,Rot_X,Rot_Y,Rot_Z'
+      endif
+      if (flag_s) then
+         h_line = trim(h_line) //
+     &        ',Sxx_Axial,Sxx_Bending_Y,Sxx_Bending_Z,'//
+     &        'Sxx_Max_Combined,Sxy_Shear,Sxz_Shear,Stors_Torsion'
+      endif
+      if (flag_q) then
+         h_line = trim(h_line) //
+     &        ',Qx_Load,Qy_Load,Qz_Load'
+      endif
+      write(iunit, '(A)') trim(h_line)
+      end subroutine write_ub21_csv_header
+!
+! ======================================================================
+!     Helper routine to write single station row
+! ======================================================================
+      subroutine write_ub21_station_row(iunit, istep, iinc, time_val,
+     &     nelem, st_pct, x_loc, flag_f, f_v, m_v, flag_u, u_v,
+     &     r_v, flag_s, s_ax, s_by, s_bz, s_max, t_xy, t_xz,
+     &     t_tor, flag_q, q_v)
+      implicit none
+      integer iunit, istep, iinc, nelem, st_pct
+      logical flag_f, flag_u, flag_s, flag_q
+      real*8 time_val, x_loc, f_v(3), m_v(3), u_v(3), r_v(3),
+     &  s_ax, s_by, s_bz, s_max, t_xy, t_xz, t_tor, q_v(3)
+      character*800 l_buf
+      character*200 n_buf
+!
+      write(l_buf, '(I4,A,I6,A,F14.6,A,I8,A,I4,A,F10.4)')
+     &     istep, ',', iinc, ',', time_val, ',', nelem, ',',
+     &     st_pct, ',', x_loc
+!
+      if (flag_f) then
+         write(n_buf, 1005)
+     &        ',', f_v(1), ',', f_v(2), ',', f_v(3),
+     &        ',', m_v(1), ',', m_v(2), ',', m_v(3)
+ 1005    format(A,F16.4,A,F16.4,A,F16.4,A,F16.4,A,F16.4,A,F16.4)
+         l_buf = trim(l_buf) // trim(n_buf)
+      endif
+!
+      if (flag_u) then
+         write(n_buf, 1006)
+     &        ',', u_v(1), ',', u_v(2), ',', u_v(3),
+     &        ',', r_v(1), ',', r_v(2), ',', r_v(3)
+ 1006    format(A,F16.6,A,F16.6,A,F16.6,A,F16.6,A,F16.6,A,F16.6)
+         l_buf = trim(l_buf) // trim(n_buf)
+      endif
+!
+      if (flag_s) then
+         write(n_buf, 1010)
+     &        ',', s_ax, ',', s_by, ',', s_bz, ',', s_max,
+     &        ',', t_xy, ',', t_xz, ',', t_tor
+ 1010    format(A,F16.4,A,F16.4,A,F16.4,A,F16.4,A,F16.4,A,F16.4,A,F16.4)
+         l_buf = trim(l_buf) // trim(n_buf)
+      endif
+!
+      if (flag_q) then
+         write(n_buf, '(A,F16.4,A,F16.4,A,F16.4)')
+     &        ',', q_v(1), ',', q_v(2), ',', q_v(3)
+         l_buf = trim(l_buf) // trim(n_buf)
+      endif
+!
+      write(iunit, '(A)') trim(l_buf)
+      end subroutine write_ub21_station_row
+!
+! ======================================================================
+!     Helper routine to check if current increment should produce output
+! ======================================================================
+      subroutine check_ub21_inc_active(istep, iinc, iout, inc_mode,
+     &     inc_freq, inc_list, ninc_list, is_active)
+      implicit none
+      integer istep, iinc, iout, inc_freq, inc_list(50), ninc_list
+      character*4 inc_mode
+      logical is_active
+      integer k
+!
+      is_active = .false.
+!     Do not output during initial passes (iout <= 0, except -2)
+      if (iout .le. 0 .and. iout .ne. -2) return
+!
+      if (inc_mode .eq. 'ALL ') then
+         is_active = .true.
+      elseif (inc_mode .eq. 'FREQ') then
+         if (inc_freq .gt. 0) then
+            if (iinc .gt. 0 .and. mod(iinc, inc_freq) .eq. 0) then
+               is_active = .true.
+            endif
+         endif
+         if (iout .eq. 2 .or. iout .eq. -2) is_active = .true.
+      elseif (inc_mode .eq. 'LIST') then
+         do k = 1, ninc_list
+            if (iinc .eq. inc_list(k)) then
+               is_active = .true.
+               exit
+            endif
+         enddo
+      else
+!        Default: LAST
+         is_active = (iout .eq. 2 .or. iout .eq. -2 .or. iout .eq. 1)
+      endif
+      end subroutine check_ub21_inc_active

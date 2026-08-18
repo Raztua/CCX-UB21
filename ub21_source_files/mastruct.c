@@ -131,7 +131,8 @@ void mastruct(ITG *nk, ITG *kon, ITG *ipkon, char *lakon, ITG *ne,
 	     (strcmp1(&lakon[8*i+1],"B21")==0)||
 	     (strcmp1(&lakon[8*i+1],"B32")==0)||
 	     (strcmp1(&lakon[8*i+1],"S45")==0)||
-	     (strcmp1(&lakon[8*i+1],"S3")==0)){
+	     (strcmp1(&lakon[8*i+1],"S3")==0)||
+	     (strcmp1(&lakon[8*i],"UCONN")==0)){
 	  
 	    /* user element
 	       number of dofs: 7th entry of label
@@ -365,7 +366,8 @@ void mastruct(ITG *nk, ITG *kon, ITG *ipkon, char *lakon, ITG *ne,
 	   (strcmp1(&lakon[8*i+1],"B21")==0)||
 	   (strcmp1(&lakon[8*i+1],"B32")==0)||
 	   (strcmp1(&lakon[8*i+1],"S45")==0)||
-	   (strcmp1(&lakon[8*i+1],"S3")==0)){
+	   (strcmp1(&lakon[8*i+1],"S3")==0)||
+	   (strcmp1(&lakon[8*i],"UCONN")==0)){
 	  
 	  /* user element
 	     number of dofs: 7th entry of label

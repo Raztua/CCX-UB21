@@ -70,7 +70,7 @@ void frd(double *co,ITG *nk,ITG *kon,ITG *ipkon,char *lakon,ITG *ne0,
 
   /* UB21: virtual station node variables */
   ITG max_node_id=0,virt_node_offset=0,current_virt_id=0,n_ub21_elems=0,
-    n1=0,n2=0;
+    n1=0,n2=0,ub21_topo_virt_base=0;
 
   ITG ncompscalar=1,ifieldscalar[1]={1},icompscalar[1]={0},
     nfieldscalar[2]={1,0};
@@ -225,7 +225,7 @@ void frd(double *co,ITG *nk,ITG *kon,ITG *ipkon,char *lakon,ITG *ne0,
     fprintf(f1,"%5sUHOST                                                              \n",p1);
     fprintf(f1,"%5sUPGM               CalculiX                                        \n",p1);
     fprintf(f1,"%5sUVERSION           Version 2.23                             \n",p1);
-    fprintf(f1,"%5sUCOMPILETIME       Thu Jul 30 09:40:33 AM CEST 2026                    \n",p1);
+    fprintf(f1,"%5sUCOMPILETIME       Tue Aug 18 02:47:12 PM CEST 2026                    \n",p1);
     fprintf(f1,"%5sUDIR                                                               \n",p1);
     fprintf(f1,"%5sUDBN                                                               \n",p1);
     
@@ -364,6 +364,7 @@ void frd(double *co,ITG *nk,ITG *kon,ITG *ipkon,char *lakon,ITG *ne0,
       fprintf(f1,"%5s%1s                  %12" ITGFORMAT "%38" ITGFORMAT "\n",p3,c,nelout,two);
     }
     nemax=*ne0;
+    ub21_topo_virt_base = virt_node_offset;
 
     for(i=0;i<*ne0;i++){
       if(ipkon[i]<=-1){
@@ -837,13 +838,13 @@ void frd(double *co,ITG *nk,ITG *kon,ITG *ipkon,char *lakon,ITG *ne0,
 	  ITG sn1, sn2;
 	  if(k==0){
 	    sn1 = rn1;
-	    sn2 = virt_node_offset + i*9 + 0;
+	    sn2 = ub21_topo_virt_base + 0;
 	  }else if(k==9){
-	    sn1 = virt_node_offset + i*9 + 8;
+	    sn1 = ub21_topo_virt_base + 8;
 	    sn2 = rn2;
 	  }else{
-	    sn1 = virt_node_offset + i*9 + (k-1);
-	    sn2 = virt_node_offset + i*9 + k;
+	    sn1 = ub21_topo_virt_base + (k-1);
+	    sn2 = ub21_topo_virt_base + k;
 	  }
 	  if(strcmp1(output,"asc")==0){
 	    fprintf(f1,"%3s%10" ITGFORMAT "%5s%5s%5" ITGFORMAT "\n",m1,sub_base+k,p11,p0,imat);
@@ -857,6 +858,7 @@ void frd(double *co,ITG *nk,ITG *kon,ITG *ipkon,char *lakon,ITG *ne0,
 	    iw=(int)sn2;           fwrite(&iw,sizeof(int),1,f1);
 	  }
 	}
+	ub21_topo_virt_base += 9;
       }else{
 
 	/* not treated element type: may lead to an inconsistency

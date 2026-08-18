@@ -34,4 +34,11 @@ ccx_2.23.a: $(OCCXF) $(OCCXC)
 e_c3d_ub21.o: ub21_module.o
 resultsmech_ub21.o: ub21_module.o
 getub21stx.o: ub21_module.o
+userbeamreleases.o: ub21_module.o
+userbeamoutputs.o: ub21_module.o
+e_c3d_uconn6.o: uconn6_module.o
+resultsmech_uconn6.o: uconn6_module.o
+userconnectors.o: uconn6_module.o
+userconnectoroutputs.o: uconn6_module.o
+uconn_plasticity.o: uconn6_module.o
 

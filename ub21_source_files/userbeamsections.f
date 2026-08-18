@@ -71,7 +71,7 @@
       real*8 thicke(mi(3),*),thickness1,thickness2,p(3),xnor(*),
      &  offset(2,*),offset1,offset2,dd,dims_temp(6),sect_type_val,
      &  prop(*), off1(3), off2(3), off3(3), rel1, rel2, rel3,
-     &  rot_angle_val
+     &  rot_angle_val, timo_val, custom_k
 !
       if((istep.gt.0).and.(irstrt(1).ge.0)) then
          write(*,*) 
@@ -89,6 +89,7 @@
       rel2=0.d0
       rel3=0.d0
       rot_angle_val=0.d0
+      timo_val=0.d0
       orientation='                                               '
       section='    '
       ipos=1
@@ -137,49 +138,42 @@
                section=textpart(i)(9:12)
             endif
          elseif(textpart(i)(1:9).eq.'RELEASE1=') then
-            if (textpart(i)(10:).eq.'M1') then
-               rel1 = 16.d0
-            elseif (textpart(i)(10:).eq.'M2') then
-               rel1 = 32.d0
-            elseif (textpart(i)(10:).eq.'T') then
-               rel1 = 8.d0
-            elseif (textpart(i)(10:).eq.'M1-M2') then
-               rel1 = 48.d0
-            elseif (textpart(i)(10:).eq.'ALLM') then
-               rel1 = 56.d0
-            else
-               read(textpart(i)(10:), *, iostat=istat) rel1
-               if (istat.gt.0) rel1 = 0.d0
-            endif
+            call parse_section_release_code(textpart(i)(10:), rel1)
          elseif(textpart(i)(1:9).eq.'RELEASE2=') then
-            if (textpart(i)(10:).eq.'M1') then
-               rel2 = 16.d0
-            elseif (textpart(i)(10:).eq.'M2') then
-               rel2 = 32.d0
-            elseif (textpart(i)(10:).eq.'T') then
-               rel2 = 8.d0
-            elseif (textpart(i)(10:).eq.'M1-M2') then
-               rel2 = 48.d0
-            elseif (textpart(i)(10:).eq.'ALLM') then
-               rel2 = 56.d0
-            else
-               read(textpart(i)(10:), *, iostat=istat) rel2
-               if (istat.gt.0) rel2 = 0.d0
-            endif
+            call parse_section_release_code(textpart(i)(10:), rel2)
          elseif(textpart(i)(1:9).eq.'RELEASE3=') then
-            if (textpart(i)(10:).eq.'M1') then
-               rel3 = 16.d0
-            elseif (textpart(i)(10:).eq.'M2') then
-               rel3 = 32.d0
-            elseif (textpart(i)(10:).eq.'T') then
-               rel3 = 8.d0
-            elseif (textpart(i)(10:).eq.'M1-M2') then
-               rel3 = 48.d0
-            elseif (textpart(i)(10:).eq.'ALLM') then
-               rel3 = 56.d0
+            call parse_section_release_code(textpart(i)(10:), rel3)
+         elseif(textpart(i)(1:6).eq.'KAPPA=') then
+            if(textpart(i)(7:8).eq.'NO' .or.
+     &         textpart(i)(7:9).eq.'OFF' .or.
+     &         textpart(i)(7:11).eq.'FALSE') then
+               timo_val = -1.d0
             else
-               read(textpart(i)(10:), *, iostat=istat) rel3
-               if (istat.gt.0) rel3 = 0.d0
+               read(textpart(i)(7:), *, iostat=istat) custom_k
+               if (istat .eq. 0) then
+                  if (custom_k .le. 1.d-6) then
+                     timo_val = -1.d0
+                  else
+                     timo_val = custom_k
+                  endif
+               else
+                  timo_val = 0.d0
+               endif
+            endif
+         elseif(textpart(i)(1:11).eq.'TIMOSHENKO=') then
+            if(textpart(i)(12:13).eq.'NO' .or.
+     &         textpart(i)(12:14).eq.'OFF' .or.
+     &         textpart(i)(12:12).eq.'0' .or.
+     &         textpart(i)(12:16).eq.'FALSE') then
+               timo_val = -1.d0
+            else
+               read(textpart(i)(12:), *, iostat=istat) custom_k
+               if (istat .eq. 0 .and. custom_k .gt. 1.d-6 .and.
+     &             custom_k .lt. 10.d0) then
+                  timo_val = custom_k
+               else
+                  timo_val = 0.d0
+               endif
             endif
          else
             if (index(textpart(i), 'OFFSET').gt.0 .or.
@@ -477,7 +471,7 @@
       prop(npropstart + 17) = p(1)           ! e2_x
       prop(npropstart + 18) = p(2)           ! e2_y
       prop(npropstart + 19) = p(3)           ! e2_z
-      prop(npropstart + 20) = off3(1)        ! node 3 off_x
+      prop(npropstart + 20) = timo_val       ! timoshenko flag (1=ON, 2=OFF)
       prop(npropstart + 21) = off3(2)        ! node 3 off_y
       prop(npropstart + 22) = off3(3)        ! node 3 off_z
       prop(npropstart + 23) = rel3           ! rel_3
@@ -572,8 +566,81 @@
          endif
       enddo
 !
-      call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,
-     &     ipoinp,inp,ipoinpc)
+      if (key .ne. 1) then
+         call getnewline(inpc,textpart,istat,n,key,iline,ipol,inl,
+     &        ipoinp,inp,ipoinpc)
+      endif
 !
       return
       end
+!
+! ==============================================================================
+!     Helper routine to parse release code in *USER BEAM SECTION
+! ==============================================================================
+      subroutine parse_section_release_code(str, rel_val)
+      implicit none
+      character*(*) str
+      real*8 rel_val
+      character*80 s
+      integer istat, len_s, m, ival
+!
+      s = adjustl(str)
+      len_s = len_trim(s)
+      rel_val = 0.d0
+      if (len_s .eq. 0) return
+!
+      do m = 1, len_s
+         if (s(m:m) .ge. 'a' .and. s(m:m) .le. 'z') then
+            s(m:m) = char(ichar(s(m:m)) - 32)
+         endif
+      enddo
+!
+      if (s(1:len_s) .eq. 'M1' .or. s(1:len_s) .eq. 'RY' .or.
+     &    s(1:len_s) .eq. 'ROTY' .or. s(1:len_s) .eq. 'MY') then
+         rel_val = 16.d0
+      elseif (s(1:len_s) .eq. 'M2' .or. s(1:len_s) .eq. 'RZ' .or.
+     &        s(1:len_s) .eq. 'ROTZ' .or. s(1:len_s) .eq. 'MZ') then
+         rel_val = 32.d0
+      elseif (s(1:len_s) .eq. 'T' .or. s(1:len_s) .eq. 'RX' .or.
+     &        s(1:len_s) .eq. 'ROTX' .or. s(1:len_s) .eq. 'MX' .or.
+     &        s(1:len_s) .eq. 'TOR' .or.
+     &        s(1:len_s) .eq. 'TORSION') then
+         rel_val = 8.d0
+      elseif (s(1:len_s) .eq. 'UX' .or. s(1:len_s) .eq. 'U1' .or.
+     &        s(1:len_s) .eq. 'AXIAL' .or. s(1:len_s) .eq. 'N' .or.
+     &        s(1:len_s) .eq. 'P0') then
+         rel_val = 1.d0
+      elseif (s(1:len_s) .eq. 'UY' .or. s(1:len_s) .eq. 'U2' .or.
+     &        s(1:len_s) .eq. 'V1' .or. s(1:len_s) .eq. 'VY' .or.
+     &        s(1:len_s) .eq. 'SHEAR1') then
+         rel_val = 2.d0
+      elseif (s(1:len_s) .eq. 'UZ' .or. s(1:len_s) .eq. 'U3' .or.
+     &        s(1:len_s) .eq. 'V2' .or. s(1:len_s) .eq. 'VZ' .or.
+     &        s(1:len_s) .eq. 'SHEAR2') then
+         rel_val = 4.d0
+      elseif (s(1:len_s) .eq. 'M1-M2' .or. s(1:len_s) .eq. 'M2-M1' .or.
+     &        s(1:len_s) .eq. 'M1_M2' .or. s(1:len_s) .eq. 'M1+M2' .or.
+     &        s(1:len_s) .eq. 'M2_M1' .or. s(1:len_s) .eq. 'M2+M1' .or.
+     &        s(1:len_s) .eq. 'RY-RZ' .or. s(1:len_s) .eq. 'MY-MZ') then
+         rel_val = 48.d0
+      elseif (s(1:len_s) .eq. 'ALLM' .or. s(1:len_s) .eq. 'ALL_M' .or.
+     &        s(1:len_s) .eq. 'ALL-M' .or. s(1:len_s) .eq. 'BALL' .or.
+     &        s(1:len_s) .eq. 'SPHERICAL' .or.
+     &        s(1:len_s) .eq. 'M1-M2-T' .or.
+     &        s(1:len_s) .eq. 'T-M1-M2') then
+         rel_val = 56.d0
+      elseif (s(1:len_s) .eq. 'ALL' .or. s(1:len_s) .eq. 'FREE' .or.
+     &        s(1:len_s) .eq. 'DISCONNECTED') then
+         rel_val = 63.d0
+      elseif (s(1:len_s) .eq. 'NONE' .or. s(1:len_s) .eq. 'FIXED' .or.
+     &        s(1:len_s) .eq. 'RIGID' .or. s(1:len_s) .eq. '0') then
+         rel_val = 0.d0
+      else
+         read(s(1:len_s), *, iostat=istat) ival
+         if (istat .eq. 0 .and. ival .ge. 0 .and. ival .le. 63) then
+            rel_val = dble(ival)
+         else
+            rel_val = 0.d0
+         endif
+      endif
+      end subroutine parse_section_release_code

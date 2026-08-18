@@ -417,35 +417,40 @@
 
       end subroutine
 
-      subroutine condense_element_local(s, ff, n, released)
+      subroutine condense_element_local(s, ff, n, released, spring_k)
       implicit none
       integer n, i, j, r
-      real*8 s(60,60), ff(60), factor, diag_val
+      real*8 s(60,60), ff(60), spring_k(60), col_r(60)
+      real*8 factor, denom, ks, s_rr
       logical released(60)
 
       do r = 1, n
          if (released(r)) then
-            diag_val = s(r,r)
-            if (dabs(diag_val) .gt. 1.d-12) then
+            s_rr = s(r,r)
+            ks = spring_k(r)
+            if (ks .lt. 0.d0) ks = 0.d0
+            denom = s_rr + ks
+            if (dabs(denom) .gt. 1.d-12) then
                do i = 1, n
-                  if (i .eq. r) cycle
-                  factor = s(i,r) / s(r,r)
-                  ! update load vector
-                  ff(i) = ff(i) - factor * ff(r)
-                  ! update stiffness
+                  col_r(i) = s(i,r)
+               enddo
+               ! update load vector
+               do i = 1, n
+                  if (i .ne. r) then
+                     ff(i) = ff(i) - (col_r(i) / denom) * ff(r)
+                  endif
+               enddo
+               ff(r) = (ks / denom) * ff(r)
+               ! update stiffness matrix: S*_ij = S_ij - col_r(i)*col_r(j)/denom
+               do i = 1, n
                   do j = 1, n
-                     if (j .eq. r) cycle
-                     s(i,j) = s(i,j) - factor * s(r,j)
+                     s(i,j) = s(i,j) - (col_r(i) * col_r(j)) / denom
                   enddo
                enddo
-               ! clear row, column, and load for r
-               do i = 1, n
-                  s(i,r) = 0.d0
-                  s(r,i) = 0.d0
-               enddo
-               ! add small stabilization stiffness to prevent singular matrix
-               s(r,r) = 1.d-9 * diag_val
-               ff(r) = 0.d0
+               ! add small stabilization for pure pin (Ks == 0) to avoid zero pivot
+               if (ks .le. 1.d-12) then
+                  s(r,r) = 1.d-9 * s_rr
+               endif
             endif
          endif
       enddo

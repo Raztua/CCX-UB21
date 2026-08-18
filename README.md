@@ -1,7 +1,7 @@
 # CalculiX CCX 2.23 — UB21 Beam Element & User Sections Extension
 
 [![CalculiX](https://img.shields.io/badge/CalculiX-CCX%202.23-blue.svg)](http://www.calculix.de/)
-[![Element](https://img.shields.io/badge/Element-UB21%20%2F%20UB32-green.svg)]()
+[![Element](https://img.shields.io/badge/Element-UB21-green.svg)]()
 [![Kinematics](https://img.shields.io/badge/Formulation-Timoshenko%20%2F%20Euler--Bernoulli-orange.svg)]()
 [![Validation](https://img.shields.io/badge/Validation-100%25%20Verified-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-GPL%20v2-lightgrey.svg)](CalculiX/ccx_2.23/src/gpl.htm)
@@ -14,6 +14,7 @@ This implementation provides high-accuracy 3D beam modeling with complete rotati
 
 ## 📑 Table of Contents
 - [Key Features](#-key-features)
+- [Repository Structure](#-repository-structure)
 - [Installation Guide](#-installation-guide)
   - [Automated 1-Command Installation](#option-1-automated-1-command-installation-recommended)
   - [Manual Installation (Linux / macOS)](#option-2-manual-installation-linux--macos)
@@ -26,6 +27,8 @@ This implementation provides high-accuracy 3D beam modeling with complete rotati
   - [4. Cross-Section Types & Parameters](#4-cross-section-types--parameters)
   - [5. Member End Releases (Hinges)](#5-member-end-releases-hinges)
   - [6. Distributed Loading Library (`*DLOAD`)](#6-distributed-loading-library-dload)
+  - [7. Dynamic Multi-Station Beam CSV Output (`*USER BEAM OUTPUT`)](#7-dynamic-multi-station-beam-csv-output-user-beam-output)
+  - [8. `UCONN6` Connectors & ASCE 41-17 Plastic Hinge Output (`*USER CONNECTOR OUTPUT`)](#8-uconn6-connectors--asce-41-17-plastic-hinge-output-user-connector-output)
 - [Analysis Capabilities](#-analysis-capabilities)
 - [Post-Processing & CGX Visualization](#-post-processing--cgx-visualization)
 - [Validation & Verification](#-validation--verification)
@@ -36,7 +39,7 @@ This implementation provides high-accuracy 3D beam modeling with complete rotati
 
 ## 🚀 Key Features
 
-- **Element Formulation**: 2-node 3D beam element (`UB21`) and 3-node quadratic variant (`UB32`) with 6 DOFs per node (`UX`, `UY`, `UZ`, `ROTX`, `ROTY`, `ROTZ`).
+- **Element Formulation**: 2-node 3D beam element (`UB21`) with 6 DOFs per node (`UX`, `UY`, `UZ`, `ROTX`, `ROTY`, `ROTZ`).
 - **Timoshenko Shear & Limiting Euler-Bernoulli Kinematics**: Exact shear coefficients computed automatically based on cross-section geometry and Poisson's ratio $\nu$.
 - **8 Cross-Section Profiles**: `RECT`, `CIRC`, `PIPE`, `I`, `T`, `CHAN` (U-channel), `L` (Angle), and `BOX` (Hollow Box).
 - **Asymmetric Section Handling**: Automatic determination of principal inertia axes ($I_{yy}$, $I_{zz}$) and principal rotation angle $\theta_p$ for `L` and `CHAN` sections to eliminate spurious bending-shear coupling.
@@ -47,6 +50,33 @@ This implementation provides high-accuracy 3D beam modeling with complete rotati
 - **Advanced Post-Processing**:
   - Automatically expands each UB21 element into 10 line sub-elements in the `.frd` file for smooth continuous stress and internal force contour visualization in CGX.
   - Generates 11-station internal force/stress evaluations per step in `ub21_beam_forces.csv`.
+
+---
+
+## 📁 Repository Structure
+
+```text
+CCX-CB/
+├── CalculiX/                     # CalculiX CCX 2.23 source tree with SPOOLES & ARPACK
+│   └── ccx_2.23/src/             # CCX core routines and patched Fortran/C modules
+├── cgx_2.23.all/                 # CalculiX GraphiX (CGX 2.23) source tree
+├── ub21_source_files/            # Pure Fortran modules for the UB21 patch
+├── ub21_ccx223.patch             # Unified diff patch for a clean CCX 2.23 tree
+├── install_ub21.sh               # Automated installer & compiler script
+├── run_tests.py                  # Unified master test runner CLI
+├── UB21_CCX223_Manual.md         # Comprehensive User Manual, Theory & Deck Reference
+├── CGX_UB21_Guide.md             # CGX Visualization & Post-Processing Guide
+├── README.md                     # Project README
+└── tests/                        # Organized verification, validation & benchmark suites
+    ├── 01_static_linear/         # Linear static, member releases & semi-rigid springs
+    ├── 02_modal_eigenfrequency/  # Free vibration modal & natural frequency benchmarks
+    ├── 03_geometric_nonlinear_pdelta/# Second-order P-Delta & geometric nonlinearity
+    ├── 04_pushover_and_plasticity/# Inelastic pushover (ASCE 41-17, MDPI CBF, PyNite)
+    ├── 05_full_verification_and_qa/# 10-Batch analytical verification & ground truth QA
+    ├── 06_demos/                 # Mixed-dimensional demo models
+    ├── reports/                  # Markdown verification reports
+    └── run_all_tests.py          # Master test harness
+```
 
 ---
 
@@ -158,7 +188,6 @@ Before defining any UB21 elements, declare the user element type:
 ```inp
 *USER ELEMENT, TYPE=UB21, NODES=2, MAXDOF=6, INTEGRATIONPOINTS=1
 ```
-*(For 3-node quadratic beams, use `TYPE=UB32, NODES=3`).*
 
 ---
 
@@ -239,9 +268,76 @@ Hinges can be defined using mnemonic string shortcuts or bitwise integers:
 
 ---
 
+### 7. Dynamic Multi-Station Beam CSV Output (`*USER BEAM OUTPUT`)
+
+Zero-RAM, high-performance streaming of internal beam results along member spans directly to CSV:
+
+```inp
+*USER BEAM OUTPUT, FILE=girders.csv, ELSET=EGIRDERS, SUBDIVISIONS=10, INCREMENT=LAST
+F, U, S
+```
+
+#### Parameters:
+- **`FILE=`**: Destination filename (e.g. `girders.csv`) or tuple list `FILE=(f1.csv, f2.csv)` mapped 1-to-1 with `ELSET=(...)`.
+- **`ELSET=`**: Target element set(s) (e.g. `EBEAM`, `ELSET=(COLS, GIRDERS)`, `ELSET=ALL`, or `ELSET=*`).
+- **`SUBDIVISIONS=N`**: Number of internal span evaluation stations per member ($N=1..100+$). Evaluates exact Hermite shape functions + closed-form particular sag $v_0(x), w_0(x)$ under distributed line loads.
+- **`INCREMENT=`**: Output step filter (`LAST`, `ALL`, `FREQ=k`, or list `(1, 5, 10)`).
+- **`COORDINATES=`**: Coordinate transformation system (`LOCAL` or `GLOBAL`).
+
+#### Column Variable Selectors:
+- **`F`**: Internal forces & moments (`Fx_Axial, Vy_Shear, Vz_Shear, Mx_Torsion, My_Bending, Mz_Bending`).
+- **`U`**: 3D Displacements and cross-section rotations (`Ux, Uy, Uz, Rot_X, Rot_Y, Rot_Z`).
+- **`S`**: Longitudinal and shear stresses (`Sxx_Axial, Sxx_Bending_Y, Sxx_Bending_Z, Sxx_Max_Combined, Sxy_Shear, Sxz_Shear, Stors_Torsion`).
+- **`Q`**: Applied line load values (`Qx_Load, Qy_Load, Qz_Load`).
+- **`ALL`**: All 26 standard columns.
+
+#### Generated CSV Format:
+```csv
+Step,Increment,Time,Element,Station_Pct,X_local,Fx_Axial,Vy_Shear,Vz_Shear,Mx_Torsion,My_Bending,Mz_Bending,Ux,Uy,Uz,Rot_X,Rot_Y,Rot_Z,...
+```
+
+---
+
+### 8. `UCONN6` Connectors & ASCE 41-17 Plastic Hinge Output (`*USER CONNECTOR OUTPUT`)
+
+6-DOF zero-length connector element (`UCONN6`) for discrete joint springs, member end releases, and nonlinear ASCE 41-17 plastic hinges:
+
+#### A. Connector Definition (`*USER CONNECTOR`)
+```inp
+*USER ELEMENT, TYPE=UCONN6, NODES=2, MAXDOF=6, INTEGRATIONPOINTS=1
+*ELEMENT, TYPE=UCONN6, ELSET=EHINGE
+10, 1, 101
+
+** Linear 6-DOF elastic spring:
+*USER CONNECTOR, ELSET=EHINGE
+K_ux, K_uy, K_uz, K_rx, K_ry, K_rz
+
+** Nonlinear ASCE 41-17 plastic hinge:
+*USER CONNECTOR, ELSET=EHINGE, NONLINEAR=ASCE41
+K_ux, K_uy, K_uz, K_rx, 0.0, K_rz
+My, theta_y, theta_cap, c_res, theta_u, theta_fail, alpha_hard, dof_idx
+```
+
+#### B. Connector Output Card (`*USER CONNECTOR OUTPUT`)
+```inp
+*USER CONNECTOR OUTPUT, FILE=hinges.csv, ELSET=EHINGE
+F, U, STATE
+```
+- **`F`**: Connector forces & moments (`Fx, Fy, Fz, Mx, My, Mz`).
+- **`U`**: Relative joint deformations (`dUx, dUy, dUz, dRotX, dRotY, dRotZ`).
+- **`STATE`** / **`ASCE41`**: Damage state (`Elastic`, `IO`, `LS`, `CP`, `Failure`), `Yield_Ratio`, `Plastic_Def`, and `Tangent_K`.
+- **`ALL`**: All connector columns.
+
+#### Generated CSV Format:
+```csv
+Step,Increment,Time,Element,Node1,Node2,Fx,Fy,Fz,Mx,My,Mz,dUx,dUy,dUz,dRotX,dRotY,dRotZ,ASCE41_State,Yield_Ratio,Plastic_Def,Tangent_K
+```
+
+---
+
 ## 🔬 Analysis Capabilities
 
-The UB21 element supports all standard CCX step procedures:
+The UB21 and UCONN6 extensions support all standard CCX step procedures:
 - **`*STATIC`**: Linear static displacement, reaction, and stress analysis.
 - **`*FREQUENCY`**: Natural frequency extraction and mode shape calculation with consistent or lumped mass.
 - **`*BUCKLE`**: Linear critical eigenvalue buckling factor estimation using exact geometric stiffness matrices.
@@ -283,24 +379,39 @@ For complete step-by-step CGX batch scripting and dataset queries, see [`CGX_UB2
 
 ## ✅ Validation & Verification
 
-The patch includes automated validation suites verifying the implementation against theoretical analytical solutions (Timoshenko & Euler-Bernoulli beam theory) and Nastran 95 baselines:
+The patch includes 15 automated validation suites verifying the implementation against theoretical analytical solutions (Timoshenko & Euler-Bernoulli beam theory) and Nastran 95 baselines:
 
 ### 1. Running the Verification Suites
 ```bash
-# Run full multi-section verification across all shapes (RECT, BOX, CIRC, PIPE, L, I, T)
-python3 run_global_verification.py
+# Run fast smoke tests across all categories (15 test suites)
+python3 run_tests.py
 
-# Run static, modal, dynamic transient, and Nastran 95 comparison test suite
-python3 run_full_validation.py
+# Run full multi-section verification across all shapes (RECT, BOX, CIRC, PIPE, L, I, T)
+python3 run_tests.py --suite verif
+
+# Run unit tests and member end releases
+python3 run_tests.py --suite unit
+
+# Run nonlinear pushover and frame benchmarks
+python3 run_tests.py --suite pushover
+
+# Run all test suites
+python3 run_tests.py --all
 ```
 
 ### 2. Validation Results Summary
 - **Static Deflection & Reactions**: **`0.000%` error** against exact Timoshenko closed-form solutions.
+- **Dynamic Station Displacements**: Exact match with Euler-Bernoulli particular sag ($v_{\text{mid}} = \frac{5 w L^4}{384 E I}$).
 - **Eigenfrequency Modal Analysis**: **`< 0.05%` error** against analytical beam natural frequencies.
 - **Eigenvalue Buckling Analysis**: Exact match on multi-span frames and column stability limits.
-- **Mesh Convergence**: Confirmed convergence for thin and deep beam regimes.
+- **15 / 15 Test Suites Passed (100% success)** across static, modal, P-Delta, ASCE 41-17 pushover, and QA verification suites.
 
-Detailed benchmarks are available in [`global_verification_report.md`](global_verification_report.md) and [`validation_report.md`](validation_report.md).
+Detailed benchmarks, pass/fail status breakdowns, and comparison tables are available in:
+- **[`tests/reports/ANALYSIS_STATUS_SUMMARY.md`](tests/reports/ANALYSIS_STATUS_SUMMARY.md)**: Pass/Fail/Review/NA metrics and physical explanations across all analysis categories.
+- **[`tests/reports/MASTER_RESULTS_SUMMARY.md`](tests/reports/MASTER_RESULTS_SUMMARY.md)**: Master quantitative comparison table across all 7 physical quantities, 5 analysis types, and reference baselines.
+- **[`tests/reports/global_verification_report.md`](tests/reports/global_verification_report.md)**: Multi-section 10-batch analytical verification report across all 8 shapes.
+- **[`tests/reports/validation_report.md`](tests/reports/validation_report.md)**: Static, modal, transient dynamic, and Nastran 95 validation report.
+- **[`tests/reports/qa_quality_report.md`](tests/reports/qa_quality_report.md)**: QA robustness, equilibrium, energy conservation, and mechanism report.
 
 ---
 
@@ -308,7 +419,9 @@ Detailed benchmarks are available in [`global_verification_report.md`](global_ve
 
 - **[`UB21_CCX223_Manual.md`](UB21_CCX223_Manual.md)**: Full technical reference manual, mathematical derivations, cross-section formulations, and verified example decks.
 - **[`CGX_UB21_Guide.md`](CGX_UB21_Guide.md)**: Complete guide for post-processing and rendering UB21 results in CGX.
-- **[`global_verification_report.md`](global_verification_report.md)**: Comprehensive multi-section verification report across all 7 shapes and 10 test batches.
+- **[`tests/README.md`](tests/README.md)**: Comprehensive test suite documentation, category organization, and execution guide.
+- **[`tests/reports/ANALYSIS_STATUS_SUMMARY.md`](tests/reports/ANALYSIS_STATUS_SUMMARY.md)**: Comprehensive status metrics (Pass / Review / Fail / NA) breakdown by analysis type.
+- **[`tests/reports/MASTER_RESULTS_SUMMARY.md`](tests/reports/MASTER_RESULTS_SUMMARY.md)**: Quantitative comparison tables vs Nastran 95, OpenSees, PyNite, LUSAS, and analytical theory.
 
 ---
 

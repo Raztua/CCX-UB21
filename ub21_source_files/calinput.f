@@ -1220,6 +1220,28 @@ c
      &       ipoinp,inp,ipoinpc,mi,ielprop,nprop,nprop_,prop,
      &       nelcon,ier)
 !     
+      elseif(textpart(1)(1:16).eq.'*USERBEAMRELEASE') then
+        call userbeamreleases(inpc,textpart,set,istartset,iendset,
+     &       ialset,nset,lakon,ne,irstrt,istep,istat,n,key,iline,
+     &       ipol,inl,ipoinp,inp,ipoinpc,ier)
+!     
+      elseif(textpart(1)(1:15).eq.'*USERBEAMOUTPUT' .or.
+     &       textpart(1)(1:16).eq.'*USERBEAMOUTPUT') then
+        call userbeamoutputs(inpc,textpart,set,istartset,iendset,
+     &       ialset,nset,lakon,ne,irstrt,istep,istat,n,key,iline,
+     &       ipol,inl,ipoinp,inp,ipoinpc,jobnamec,ier)
+!     
+      elseif(textpart(1)(1:20).eq.'*USERCONNECTOROUTPUT') then
+        call userconnectoroutputs(inpc,textpart,set,istartset,
+     &       iendset,ialset,nset,lakon,ne,irstrt,istep,istat,n,
+     &       key,iline,ipol,inl,ipoinp,inp,ipoinpc,jobnamec,ier)
+!     
+      elseif(textpart(1)(1:14).eq.'*USERCONNECTOR') then
+        call userconnectors(inpc,textpart,set,istartset,iendset,
+     &       ialset,nset,ielmat,matname,nmat,ielorien,orname,norien,
+     &       lakon,irstrt,istep,istat,n,key,iline,ipol,inl,ipoinp,
+     &       inp,ipoinpc,mi,ielprop,nprop,nprop_,prop,nelcon,ier)
+!     
       elseif(textpart(1)(1:12).eq.'*USERSECTION') then
         call usersections(inpc,textpart,set,istartset,iendset,
      &       ialset,nset,ielmat,matname,nmat,irstrt,istep,istat,n,
@@ -1615,6 +1637,7 @@ c
 !     
         if(lakon(i)(1:1).eq.'G') cycle
         if(lakon(i)(1:7).eq.'DCOUP3D') cycle
+        if(lakon(i)(1:5).eq.'UCONN') cycle
         if(ielmat(1,i).eq.0) then
           ierror=1
           write(*,*) '*ERROR in calinput: no material was assigned'

@@ -77,12 +77,14 @@
      &  lumped_flag, env_stat
       character(len=10) :: env_lump
       logical released(12)
+      real*8 spring_k(12)
       real*8 px1, py1, pz1, px2, py2, pz2, c1_cnt, c2_cnt,
      &  ax1, ay1, az1, ax2, ay2, az2, q1_glob(3), q2_glob(3),
      &  q1_loc(3), q2_loc(3)
-      real*8 xl_def(3,2),e1_init(3),e1_curr(3),len_init,len_curr,
+      real*8 xl_def(3,20),e1_init(3),e1_curr(3),len_init,len_curr,
      &  cross_e1(3),dot_e1,u_rot(3),cross_u(3),dot_u_e2,len_cross,
-     &  e2_init(3)
+     &  e2_init(3),n_axial,c1_g,c2_g,c3_g,c4_g,c_tors_g,eps_th,
+     &  timo_val
 !
 !
 
@@ -126,12 +128,28 @@
          offsets(2,2)=prop(index+13)
          offsets(3,2)=prop(index+14)
 
-         release_codes(1)=nint(prop(index+15))
-         release_codes(2)=nint(prop(index+16))
+         if (allocated(ielrelease)) then
+            if (nelem .le. size(ielrelease, 2) .and.
+     &          ielrelease(1, nelem) .ge. 0) then
+               release_codes(1) = ielrelease(1, nelem)
+            else
+               release_codes(1) = nint(prop(index+15))
+            endif
+            if (nelem .le. size(ielrelease, 2) .and.
+     &          ielrelease(2, nelem) .ge. 0) then
+               release_codes(2) = ielrelease(2, nelem)
+            else
+               release_codes(2) = nint(prop(index+16))
+            endif
+         else
+            release_codes(1) = nint(prop(index+15))
+            release_codes(2) = nint(prop(index+16))
+         endif
 
          e2_in(1)=prop(index+17)
          e2_in(2)=prop(index+18)
          e2_in(3)=prop(index+19)
+         timo_val=prop(index+20)
       else
          write(*,*) '*ERROR in e_c3d_ub21: element ',nelem,
      &        ' has no section properties.'
@@ -259,6 +277,23 @@
          e2(j) = e2(j) - c1*e1(j)
       enddo
       len_e2=dsqrt(e2(1)**2 + e2(2)**2 + e2(3)**2)
+      if (len_e2 .lt. 1.d-6) then
+         ! Collinear with e1: fallback to global z (0, 0, 1) or global x (1, 0, 0)
+         if (dabs(e1(3)) .lt. 0.9d0) then
+            e2(1)=0.d0
+            e2(2)=0.d0
+            e2(3)=1.d0
+         else
+            e2(1)=1.d0
+            e2(2)=0.d0
+            e2(3)=0.d0
+         endif
+         c1 = e2(1)*e1(1) + e2(2)*e1(2) + e2(3)*e1(3)
+         do j=1,3
+            e2(j) = e2(j) - c1*e1(j)
+         enddo
+         len_e2=dsqrt(e2(1)**2 + e2(2)**2 + e2(3)**2)
+      endif
       do j=1,3
          e2(j)=e2(j)/len_e2
       enddo
@@ -365,6 +400,23 @@
          e2_init(j)=e2_init(j)-c1*e1_init(j)
       enddo
       len_e2=dsqrt(e2_init(1)**2+e2_init(2)**2+e2_init(3)**2)
+      if (len_e2 .lt. 1.d-6) then
+         if (dabs(e1_init(3)) .lt. 0.9d0) then
+            e2_init(1)=0.d0
+            e2_init(2)=0.d0
+            e2_init(3)=1.d0
+         else
+            e2_init(1)=1.d0
+            e2_init(2)=0.d0
+            e2_init(3)=0.d0
+         endif
+         c1 = e2_init(1)*e1_init(1)+e2_init(2)*e1_init(2)+
+     &        e2_init(3)*e1_init(3)
+         do j=1,3
+            e2_init(j)=e2_init(j)-c1*e1_init(j)
+         enddo
+         len_e2=dsqrt(e2_init(1)**2+e2_init(2)**2+e2_init(3)**2)
+      endif
       do j=1,3
          e2_init(j)=e2_init(j)/len_e2
       enddo
@@ -439,7 +491,20 @@
          s(10,10) = s(4,4)
 
           ! Bending in local x-y plane (resisted by xi11, involves v (2/8) and r_z (6/12))
-          phi_z = 12.d0 * e * xi11 / (um * a * xk_y * dl**2)
+          if (timo_val .lt. -1.d-6) then
+             ! Pure Euler-Bernoulli mode (KAPPA=0, TIMOSHENKO=NO)
+             phi_z = 0.d0
+             phi_y = 0.d0
+          else if (timo_val .gt. 1.d-6) then
+             ! User-specified custom shear coefficient (e.g. KAPPA=0.85, KAPPA=0.8333)
+             phi_z = 12.d0 * e * xi11 / (um * a * timo_val * dl**2)
+             phi_y = 12.d0 * e * xi22 / (um * a * timo_val * dl**2)
+          else
+             ! Default: automatic analytical Cowper shear factor
+             phi_z = 12.d0 * e * xi11 / (um * a * xk_y * dl**2)
+             phi_y = 12.d0 * e * xi22 / (um * a * xk_z * dl**2)
+          endif
+
           s(2,2) = 12.d0*e*xi11/((1.d0 + phi_z)*(dl**3))
           s(2,6) = 6.d0*e*xi11/((1.d0 + phi_z)*(dl**2))
           s(2,8) = -s(2,2)
@@ -454,7 +519,6 @@
           s(12,12) = s(6,6)
 
           ! Bending in local x-z plane (resisted by xi22, involves w (3/9) and r_y (5/11))
-          phi_y = 12.d0 * e * xi22 / (um * a * xk_z * dl**2)
           s(3,3) = 12.d0*e*xi22/((1.d0 + phi_y)*(dl**3))
           s(3,5) = -6.d0*e*xi22/((1.d0 + phi_y)*(dl**2))
           s(3,9) = -s(3,3)
@@ -474,7 +538,72 @@
                s(i,j)=s(j,i)
             enddo
          enddo
+!
+!        geometric stiffness matrix contribution (P-delta member curvature)
+!        n_axial < 0 indicates compression (P = -n_axial > 0)
+!        Temperature/thermal strain eth(1) is subtracted to prevent spurious
+!        stress/stiffness from unconstrained thermal expansion
+!
+         eps_th = 0.d0
+         if (ithermal(1) .gt. 0) then
+            eps_th = eth(1)
+         endif
+         n_axial = 0.d0
+         if (len_init .gt. 1.d-10) then
+            n_axial = e * a *
+     &           ((len_curr - len_init) / len_init - eps_th)
+         endif
 
+         if (dabs(n_axial) .gt. 1.d-12) then
+            c1_g = 6.d0 / (5.d0 * dl)
+            c2_g = 1.d0 / 10.d0
+            c3_g = 2.d0 * dl / 15.d0
+            c4_g = -dl / 30.d0
+            c_tors_g = (xi11 + xi22) / (a * dl)
+
+            ! Transverse v (DOFs 2, 6, 8, 12 in local x-y plane)
+            s(2,2) = s(2,2) + n_axial * c1_g
+            s(2,6) = s(2,6) + n_axial * c2_g
+            s(2,8) = s(2,8) - n_axial * c1_g
+            s(2,12) = s(2,12) + n_axial * c2_g
+
+            s(6,6) = s(6,6) + n_axial * c3_g
+            s(6,8) = s(6,8) - n_axial * c2_g
+            s(6,12) = s(6,12) + n_axial * c4_g
+
+            s(8,8) = s(8,8) + n_axial * c1_g
+            s(8,12) = s(8,12) - n_axial * c2_g
+
+            s(12,12) = s(12,12) + n_axial * c3_g
+
+            ! Transverse w (DOFs 3, 5, 9, 11 in local x-z plane)
+            s(3,3) = s(3,3) + n_axial * c1_g
+            s(3,5) = s(3,5) - n_axial * c2_g
+            s(3,9) = s(3,9) - n_axial * c1_g
+            s(3,11) = s(3,11) - n_axial * c2_g
+
+            s(5,5) = s(5,5) + n_axial * c3_g
+            s(5,9) = s(5,9) + n_axial * c2_g
+            s(5,11) = s(5,11) + n_axial * c4_g
+
+            s(9,9) = s(9,9) + n_axial * c1_g
+            s(9,11) = s(9,11) + n_axial * c2_g
+
+            s(11,11) = s(11,11) + n_axial * c3_g
+
+            ! Torsion (DOFs 4, 10)
+            s(4,4) = s(4,4) + n_axial * c_tors_g
+            s(4,10) = s(4,10) - n_axial * c_tors_g
+            s(10,10) = s(10,10) + n_axial * c_tors_g
+
+            ! complete symmetry
+            do i = 1, 12
+               do j = 1, i
+                  s(i,j) = s(j,i)
+               enddo
+            enddo
+         endif
+!
 !        consistent mass matrix SM' in local coordinates
 !
          if(buckling.eq.1) then
@@ -742,107 +871,136 @@
                        ! Initialize local load parameters
                        load_type = 1
                        load_dir = 0
-
                        if(sideload(k)(1:2).eq.'PX') then
-                          ff_loc(1) = ff_loc(1) + val * dl / 2.d0
-                          ff_loc(7) = ff_loc(7) + val * dl / 2.d0
-                          load_dir = 3
-                       elseif(sideload(k)(1:2).eq.'P1') then
-                          load_dir = 1
-                          if(sideload(k)(5:7).eq.'_T1') then
-                             load_type = 2
-                             f1 = (3.d0/20.d0) * val * dl
-                             m1 = (1.d0/30.d0) * val * (dl**2)
-                             f2 = (7.d0/20.d0) * val * dl
-                             m2 = -(1.d0/20.d0) * val * (dl**2)
-                          elseif(sideload(k)(5:7).eq.'_T2') then
-                             load_type = 2
-                             f1 = (7.d0/20.d0) * val * dl
-                             m1 = (1.d0/20.d0) * val * (dl**2)
-                             f2 = (3.d0/20.d0) * val * dl
-                             m2 = -(1.d0/30.d0) * val * (dl**2)
-                          elseif(sideload(k)(5:7).eq.'_P_') then
-                             load_type = 3
-                             read(sideload(k)(8:9), '(i2)') a_pct
-                             read(sideload(k)(11:12), '(i2)') b_pct
-                             alpha = dfloat(a_pct) / 100.d0
-                             beta = dfloat(b_pct) / 100.d0
-
-                             f1 = val * dl * ( (beta - alpha) -
+                           ff_loc(1) = ff_loc(1) + val * dl / 2.d0
+                           ff_loc(7) = ff_loc(7) + val * dl / 2.d0
+                           load_dir = 3
+                        elseif(sideload(k)(1:2).eq.'P1') then
+                           load_dir = 1
+                           if(sideload(k)(5:7).eq.'_T1') then
+                              load_type = 2
+                              w1 = 0.d0
+                              w2 = val
+                              alpha = 0.d0
+                              beta = 1.d0
+                              f1 = (3.d0/20.d0) * val * dl
+                              m1 = (1.d0/30.d0) * val * (dl**2)
+                              f2 = (7.d0/20.d0) * val * dl
+                              m2 = -(1.d0/20.d0) * val * (dl**2)
+                           elseif(sideload(k)(5:7).eq.'_T2') then
+                              load_type = 2
+                              w1 = val
+                              w2 = 0.d0
+                              alpha = 0.d0
+                              beta = 1.d0
+                              f1 = (7.d0/20.d0) * val * dl
+                              m1 = (1.d0/20.d0) * val * (dl**2)
+                              f2 = (3.d0/20.d0) * val * dl
+                              m2 = -(1.d0/30.d0) * val * (dl**2)
+                           elseif(sideload(k)(5:7).eq.'_P_') then
+                              load_type = 3
+                              read(sideload(k)(8:9), '(i2)') a_pct
+                              read(sideload(k)(11:12), '(i2)') b_pct
+                              alpha = dfloat(a_pct) / 100.d0
+                              beta = dfloat(b_pct) / 100.d0
+                              w1 = val
+                              w2 = val
+                              f1 = val * dl * ( (beta - alpha) -
      &                            (beta**3 - alpha**3) +
      &                            0.5d0*(beta**4 - alpha**4) )
-                             m1 = val * (dl**2) * (
+                              m1 = val * (dl**2) * (
      &                            0.5d0*(beta**2 - alpha**2) -
      &                            (2.d0/3.d0)*(beta**3 - alpha**3) +
      &                            0.25d0*(beta**4 - alpha**4) )
-                             f2 = val * dl * ( (beta**3 - alpha**3) -
+                              f2 = val * dl * ( (beta**3 - alpha**3) -
      &                            0.5d0*(beta**4 - alpha**4) )
-                             m2 = val * (dl**2) * (
+                              m2 = val * (dl**2) * (
      &                            -(1.d0/3.d0)*(beta**3 - alpha**3) +
      &                            0.25d0*(beta**4 - alpha**4) )
-                          else
-                             f1 = val * dl / 2.d0
-                             m1 = val * (dl**2) / 12.d0
-                             f2 = val * dl / 2.d0
-                             m2 = -val * (dl**2) / 12.d0
-                          endif
-                          ff_loc(2) = ff_loc(2) + f1
-                          ff_loc(6) = ff_loc(6) + m1
-                          ff_loc(8) = ff_loc(8) + f2
-                          ff_loc(12) = ff_loc(12) + m2
-                       elseif(sideload(k)(1:2).eq.'P2') then
-                          load_dir = 2
-                          if(sideload(k)(5:7).eq.'_T1') then
-                             load_type = 2
-                             f1 = (3.d0/20.d0) * val * dl
-                             m1 = -(1.d0/30.d0) * val * (dl**2)
-                             f2 = (7.d0/20.d0) * val * dl
-                             m2 = (1.d0/20.d0) * val * (dl**2)
-                          elseif(sideload(k)(5:7).eq.'_T2') then
-                             load_type = 2
-                             f1 = (7.d0/20.d0) * val * dl
-                             m1 = -(1.d0/20.d0) * val * (dl**2)
-                             f2 = (3.d0/20.d0) * val * dl
-                             m2 = (1.d0/30.d0) * val * (dl**2)
-                          elseif(sideload(k)(5:7).eq.'_P_') then
-                             load_type = 3
-                             read(sideload(k)(8:9), '(i2)') a_pct
-                             read(sideload(k)(11:12), '(i2)') b_pct
-                             alpha = dfloat(a_pct) / 100.d0
-                             beta = dfloat(b_pct) / 100.d0
-
-                             f1 = val * dl * ( (beta - alpha) -
+                           else
+                              load_type = 1
+                              w1 = val
+                              w2 = val
+                              alpha = 0.d0
+                              beta = 1.d0
+                              f1 = val * dl / 2.d0
+                              m1 = val * (dl**2) / 12.d0
+                              f2 = val * dl / 2.d0
+                              m2 = -val * (dl**2) / 12.d0
+                           endif
+                           ff_loc(2) = ff_loc(2) + f1
+                           ff_loc(6) = ff_loc(6) + m1
+                           ff_loc(8) = ff_loc(8) + f2
+                           ff_loc(12) = ff_loc(12) + m2
+                        elseif(sideload(k)(1:2).eq.'P2') then
+                           load_dir = 2
+                           if(sideload(k)(5:7).eq.'_T1') then
+                              load_type = 2
+                              w1 = 0.d0
+                              w2 = val
+                              alpha = 0.d0
+                              beta = 1.d0
+                              f1 = (3.d0/20.d0) * val * dl
+                              m1 = -(1.d0/30.d0) * val * (dl**2)
+                              f2 = (7.d0/20.d0) * val * dl
+                              m2 = (1.d0/20.d0) * val * (dl**2)
+                           elseif(sideload(k)(5:7).eq.'_T2') then
+                              load_type = 2
+                              w1 = val
+                              w2 = 0.d0
+                              alpha = 0.d0
+                              beta = 1.d0
+                              f1 = (7.d0/20.d0) * val * dl
+                              m1 = -(1.d0/20.d0) * val * (dl**2)
+                              f2 = (3.d0/20.d0) * val * dl
+                              m2 = (1.d0/30.d0) * val * (dl**2)
+                           elseif(sideload(k)(5:7).eq.'_P_') then
+                              load_type = 3
+                              read(sideload(k)(8:9), '(i2)') a_pct
+                              read(sideload(k)(11:12), '(i2)') b_pct
+                              alpha = dfloat(a_pct) / 100.d0
+                              beta = dfloat(b_pct) / 100.d0
+                              w1 = val
+                              w2 = val
+                              f1 = val * dl * ( (beta - alpha) -
      &                            (beta**3 - alpha**3) +
      &                            0.5d0*(beta**4 - alpha**4) )
-                             m1 = -val * (dl**2) * (
+                              m1 = -val * (dl**2) * (
      &                            0.5d0*(beta**2 - alpha**2) -
      &                            (2.d0/3.d0)*(beta**3 - alpha**3) +
      &                            0.25d0*(beta**4 - alpha**4) )
-                             f2 = val * dl * ( (beta**3 - alpha**3) -
+                              f2 = val * dl * ( (beta**3 - alpha**3) -
      &                            0.5d0*(beta**4 - alpha**4) )
-                             m2 = -val * (dl**2) * (
+                              m2 = -val * (dl**2) * (
      &                            -(1.d0/3.d0)*(beta**3 - alpha**3) +
      &                            0.25d0*(beta**4 - alpha**4) )
-                          else
-                             f1 = val * dl / 2.d0
-                             m1 = -val * (dl**2) / 12.d0
-                             f2 = val * dl / 2.d0
-                             m2 = val * (dl**2) / 12.d0
-                          endif
-                          ff_loc(3) = ff_loc(3) + f1
-                          ff_loc(5) = ff_loc(5) + m1
-                          ff_loc(9) = ff_loc(9) + f2
-                          ff_loc(11) = ff_loc(11) + m2
-                       else
-                          write(*,*) 'ERROR: Unknown load type'
-                       endif
-                       ! Save load parameters for resultsmech
-                       if (load_dir .gt. 0) then
-                          prop(index+24) = w1
-                          prop(index+25) = w2
-                          prop(index+26) = alpha
-                          prop(index+27) = beta
-                       endif
+                           else
+                              load_type = 1
+                              w1 = val
+                              w2 = val
+                              alpha = 0.d0
+                              beta = 1.d0
+                              f1 = val * dl / 2.d0
+                              m1 = -val * (dl**2) / 12.d0
+                              f2 = val * dl / 2.d0
+                              m2 = val * (dl**2) / 12.d0
+                           endif
+                           ff_loc(3) = ff_loc(3) + f1
+                           ff_loc(5) = ff_loc(5) + m1
+                           ff_loc(9) = ff_loc(9) + f2
+                           ff_loc(11) = ff_loc(11) + m2
+                        else
+                           write(*,*) 'ERROR: Unknown load type'
+                        endif
+                        ! Save load parameters for resultsmech
+                        if (load_dir .gt. 0) then
+                           prop(index+20) = dble(load_type)
+                           prop(index+21) = dble(load_dir)
+                           prop(index+24) = w1
+                           prop(index+25) = w2
+                           prop(index+26) = alpha
+                           prop(index+27) = beta
+                        endif
                     endif
                  enddo
               endif
@@ -852,20 +1010,68 @@
 !
          call apply_offsets_local(s, sm, ff_loc, mass, offsets, nope)
 !
-!        Apply member end releases (hinges) at local DOFs via static condensation
+!        Apply member end releases (hinges/springs) at local DOFs via static condensation
 !
+         do k = 1, 12
+            released(k) = .false.
+            spring_k(k) = 0.d0
+         enddo
          do inode = 1, nope
-            k = (inode-1)*6
+            r = (inode-1)*6
             code = release_codes(inode)
-            released(k+1) = (iand(code, 1) .ne. 0)
-            released(k+2) = (iand(code, 2) .ne. 0)
-            released(k+3) = (iand(code, 4) .ne. 0)
-            released(k+4) = (iand(code, 8) .ne. 0)
-            released(k+5) = (iand(code, 16) .ne. 0)
-            released(k+6) = (iand(code, 32) .ne. 0)
+            if (code .gt. 0) then
+               if (iand(code, 1) .ne. 0) then
+                  released(r+1) = .true.
+                  if (allocated(relspring)) then
+                     if (nelem .le. size(relspring,3)) then
+                        spring_k(r+1) = relspring(1, inode, nelem)
+                     endif
+                  endif
+               endif
+               if (iand(code, 2) .ne. 0) then
+                  released(r+2) = .true.
+                  if (allocated(relspring)) then
+                     if (nelem .le. size(relspring,3)) then
+                        spring_k(r+2) = relspring(2, inode, nelem)
+                     endif
+                  endif
+               endif
+               if (iand(code, 4) .ne. 0) then
+                  released(r+3) = .true.
+                  if (allocated(relspring)) then
+                     if (nelem .le. size(relspring,3)) then
+                        spring_k(r+3) = relspring(3, inode, nelem)
+                     endif
+                  endif
+               endif
+               if (iand(code, 8) .ne. 0) then
+                  released(r+4) = .true.
+                  if (allocated(relspring)) then
+                     if (nelem .le. size(relspring,3)) then
+                        spring_k(r+4) = relspring(4, inode, nelem)
+                     endif
+                  endif
+               endif
+               if (iand(code, 16) .ne. 0) then
+                  released(r+5) = .true.
+                  if (allocated(relspring)) then
+                     if (nelem .le. size(relspring,3)) then
+                        spring_k(r+5) = relspring(5, inode, nelem)
+                     endif
+                  endif
+               endif
+               if (iand(code, 32) .ne. 0) then
+                  released(r+6) = .true.
+                  if (allocated(relspring)) then
+                     if (nelem .le. size(relspring,3)) then
+                        spring_k(r+6) = relspring(6, inode, nelem)
+                     endif
+                  endif
+               endif
+            endif
          enddo
 
-         call condense_element_local(s, ff_loc, 12, released)
+         call condense_element_local(s, ff_loc, 12, released, spring_k)
          if (rhsi.eq.1) then
             if (.not. allocated(ff_saved)) then
                allocate(ff_saved(60, 100000))

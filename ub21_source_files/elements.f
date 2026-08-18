@@ -402,28 +402,39 @@ c     Bernhardi end
         nope=1
         nopeexp=1
       elseif(label(1:1).eq.'U') then
-        number=ichar(label(2:2))*256**3+
-     &       ichar(label(3:3))*256**2+
-     &       ichar(label(4:4))*256+
-     &       ichar(label(5:5))
-        call nidentk(iuel,number,nuel_,id,four)
-!       Check that registry ID is valid and matches the requested user element type to avoid silent memory corruption
-        if(id.le.0.or.id.gt.nuel_) then
-          write(*,*) '*ERROR in elements: user element type not found'
-          call exit(201)
+        if(label(1:5).eq.'UCONN'.or.label(1:6).eq.'UCONN6') then
+          intpoints=1
+          ndof=6
+          nope=2
+          nopeexp=2
+          label(1:5)='UCONN'
+          label(6:6)=char(intpoints)
+          label(7:7)=char(ndof)
+          label(8:8)=char(nope)
+        else
+          number=ichar(label(2:2))*256**3+
+     &         ichar(label(3:3))*256**2+
+     &         ichar(label(4:4))*256+
+     &         ichar(label(5:5))
+          call nidentk(iuel,number,nuel_,id,four)
+!         Check that registry ID is valid and matches the requested user element type to avoid silent memory corruption
+          if(id.le.0.or.id.gt.nuel_) then
+            write(*,*) '*ERROR in elements: user element type not found'
+            call exit(201)
+          endif
+          if(iuel(1,id).ne.number) then
+            write(*,*) '*ERROR in elements: user element type mismatch'
+            call exit(201)
+          endif
+          intpoints=iuel(2,id)
+          ndof=iuel(3,id)
+          nope=iuel(4,id)
+          nopeexp=nope
+!         Use direct character assignment instead of internal WRITE to bypass Fortran I/O formatting of control characters
+          label(6:6) = char(intpoints)
+          label(7:7) = char(ndof)
+          label(8:8) = char(nope)
         endif
-        if(iuel(1,id).ne.number) then
-          write(*,*) '*ERROR in elements: user element type mismatch'
-          call exit(201)
-        endif
-        intpoints=iuel(2,id)
-        ndof=iuel(3,id)
-        nope=iuel(4,id)
-        nopeexp=nope
-!       Use direct character assignment instead of internal WRITE to bypass Fortran I/O formatting of control characters
-        label(6:6) = char(intpoints)
-        label(7:7) = char(ndof)
-        label(8:8) = char(nope)
       endif
 !     
       do
