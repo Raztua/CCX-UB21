@@ -1228,43 +1228,7 @@ M_y, theta_y, theta_cap, c_res, theta_u, theta_fail, alpha_h, dof, [P_crit, du_y
 | **Collapse Prevention (CP)** | $225.97\,\text{mm}$ | $218.43\,\text{kN}$ | **CP** | Significant plastic rotation and energy dissipation |
 | **Maximum Plastic Capacity** | $350.00\,\text{mm}$ | **`338.40 kN`** | **Plateau** | Full global multi-storey sway mechanism |
 
----
-
-### 9.4 Benchmark 3: MDPI Metals (2024, 14, 1388) 5-Storey 5-Bay Chevron CBF
-
-*Reference: MDPI Metals 2024, 14, 1388: "Nonlinear Static Assessment of Steel Concentrically Braced Frames with Chevron Braces"*
-
-#### Structural Elevation & Member Schedule
-```
-     Storey Loads (Triangular)
-       F5 = 365.4 kN -> [N501] +---+---+---+---+ [N506] Storey 5: HEA 260 | UPE 140 | HEM 200
-                               |\ /|   |   |   |\ /|
-       F4 = 292.3 kN -> [N401] +---+---+---+---+ [N406] Storey 4: HEA 300 | UPE 180 | HEM 200
-                               |\ /|   |   |   |\ /|
-       F3 = 219.2 kN -> [N301] +---+---+---+---+ [N306] Storey 3: HEA 300 | UPE 200 | HEM 200
-                               |\ /|   |   |   |\ /|
-       F2 = 146.2 kN -> [N201] +---+---+---+---+ [N206] Storey 2: HEA 300 | UPE 200 | HEM 240
-                               |\ /|   |   |   |\ /|
-       F1 =  73.1 kN -> [N101] +---+---+---+---+ [N106] Storey 1: HEA 300 | UPE 220 | HEM 300
-                               |\ /|   |   |   |\ /|
-                               +---+---+---+---+---+
-                              [N1]                [N6]
-                              /////              /////
-                               Bay 1   2   3   4   Bay 5
-                              (Braced)   Gravity  (Braced)
-```
-
-#### Quantitative Benchmark Comparison
-| Milestone / Parameter | Eurocode 3 / 8 Analytical Formula | MDPI Benchmark Target (*Table 9*) | CalculiX CCX (`UB21` + `UCONN6`) | Discrepancy |
-| :--- | :--- | :---: | :---: | :---: |
-| **Initial Elastic Stiffness ($K$)** | $K = 1 / \delta_1$ | **`41.10 m⁻¹`** ($45.05\,\text{kN/mm}$) | **`41.28 m⁻¹`** ($45.25\,\text{kN/mm}$) | **`0.43 %`** |
-| **Point A: First Buckling Drift ($\delta_A$)** | $\delta_A = \alpha_A / K$ | **`12.02 mm`** | **`12.02 mm`** | **`0.01 %`** |
-| **Point A: First Buckling Load ($\alpha_A$)** | $\alpha_A = V_{\text{buckle}} / F_{\text{ref}}$ | **`0.4939`** ($541.40\,\text{kN}$) | **`0.4963`** ($544.05\,\text{kN}$) | **`0.48 %`** |
-| **Point C: Plastic Mechanism Limit ($\alpha_0$)** | Kinematic Virtual Work Limit | **`2.2200`** ($2433.56\,\text{kN}$) | **`2.2200`** ($2433.56\,\text{kN}$) | **`0.00 %`** |
-
----
-
-### 9.5 Benchmark 4: PyNite FEA Propped Beam Pushover (`Pushover Analysis.py`)
+### 9.4 Benchmark 4: PyNite FEA Propped Beam Pushover (`Pushover Analysis.py`)
 
 *Reference: AISC Matrix Structural Analysis, 2nd Edition (Examples 8.6 & 10.4)*
 
